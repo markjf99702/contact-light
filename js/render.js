@@ -418,7 +418,10 @@ function terrain(r, sc) {
   const lower = new Path2D();
   for (let k = 0; k < idx.length - 1; k++) {
     const i = idx[k], j = idx[k + 1];
-    const sh = shadeAt(g, i, sinS, cosS);
+    // Zoomed out, a segment spans several samples: average them, or the strip breaks into blocks.
+    let sh = 0;
+    for (let q = i; q < Math.max(i + 1, j); q++) sh += shadeAt(g, q, sinS, cosS);
+    sh /= Math.max(1, j - i);
     const lv = Math.min(LEVELS - 1, Math.round((sh / 1.4) * (LEVELS - 1)));
     const p = paths[lv];
     used[lv] = 1;
@@ -728,12 +731,16 @@ function offscreen(r, sc) {
   const d = Math.abs(tx - sc.f.x);
   const right = px >= W;
   const v = sc.view;
-  const y = v.top + (v.bottom - v.top) * 0.5;
   const text = `${sc.site.target.label} ${Math.round(d).toLocaleString('en-US')} ft`;
   ctx.save();
   ctx.font = '700 10px "B612 Mono", ui-monospace, monospace';
   const w = ctx.measureText(text).width + 26;
   const x = right ? W - w - 8 : 8;
+  // Halfway down the view, unless the LM is there: then high up, or just above the ground.
+  const b = r.lmBox;
+  const clear = y => !b || x > b[2] + 6 || x + w < b[0] - 6 || y - 11 > b[3] + 6 || y + 11 < b[1] - 6;
+  const ys = [v.top + (v.bottom - v.top) * 0.5, v.top + 64, r.cam.gy - 34];
+  const y = ys.find(clear) ?? ys[0];
   ctx.fillStyle = 'rgba(8, 14, 20, .72)';
   ctx.strokeStyle = 'rgba(140, 220, 255, .55)';
   ctx.lineWidth = 1;
@@ -1039,6 +1046,9 @@ function craft(r, sc) {
   // Far off, draw it a little bigger than true so it never shrinks to a speck.
   const k = Math.max(1, 30 / (span * cam.s));
   const sc2 = cam.s * k;
+  // Where it is on screen, roughly, so the target pointer can keep out of its way.
+  const half = (f.veh.half + 2) * sc2;
+  r.lmBox = [X(f.x) - half, Y(f.y) - (f.veh.height - f.veh.cg + 1) * sc2, X(f.x) + half, Y(f.y) + (f.veh.cg + f.veh.probe + 1) * sc2];
   const detail = clamp((span * sc2 - 24) / 70, 0, 1);
   setMinLine(1 / sc2);
   const probes = f.phase === 'flying' || f.phase === 'abort' ? 'hang' : 'bent';
