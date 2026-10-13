@@ -5,7 +5,7 @@ import { SITES, siteById } from './sites.js';
 import { buildGround } from './terrain.js';
 import { createFlight, step, altitude, pct, finish, BINGO_AFTER_LOW, LAND_AFTER_BINGO } from './sim.js';
 import { judge, feet } from './judge.js';
-import { createRadio, radioUpdate, openingLines, endingLines, missionTime } from './calls.js';
+import { createRadio, radioUpdate, openingLines, endingLines, missionTime, tooFastAlong } from './calls.js';
 import { createAutopilot, autopilotInput } from './autopilot.js';
 import { createRenderer, resizeRenderer, renderFrame, burst, bump } from './render.js';
 import { drawProfile } from './strip.js';
@@ -346,8 +346,9 @@ function draw(c, dt) {
   setText('roFwdLbl', vx < -0.05 ? 'BACK' : 'FWD');
   setNum('roFwd', Math.abs(vx) >= 10 ? String(Math.round(Math.abs(vx))) : Math.abs(vx).toFixed(1));
   setNum('roFuel', pct(f).toFixed(1));
-  flag('roRate', fly && alt < 40 && -vy > 9 ? 'bad' : fly && alt < 70 && -vy > 5 ? 'warn' : '');
-  flag('roFwd', fly && alt < 15 && Math.abs(vx) > 4 ? 'bad' : fly && alt < 40 && Math.abs(vx) > 2 ? 'warn' : '');
+  flag('roRate', fly && alt < 70 && -vy > 9 ? 'bad' : fly && alt < 90 && -vy > 5 ? 'warn' : '');
+  // Red when it can't stop along the ground before the footpads touch at this descent rate.
+  flag('roFwd', fly && (tooFastAlong({ alt, rate: vy, fwd: vx }) || (alt < 15 && Math.abs(vx) > 4)) ? 'bad' : fly && alt < 60 && Math.abs(vx) > 2 ? 'warn' : '');
   const since = f.lowAt == null ? null : f.t - f.lowAt;
   flag('roFuel', since == null ? '' : since >= BINGO_AFTER_LOW ? 'bad' : 'warn');
   // The clock Houston starts at the low-level light: time to Bingo, then time to land.
@@ -658,6 +659,7 @@ window.contactLight = {
   fly(id, m = 'p66') { startFlight(siteById(id), m); },
   demo() { return demo && { site: demo.site.id, phase: demo.f.phase }; },
   drawing() { return r.key; },
-  scene() { return { dust: r.dustI, shadow: !!r.shadowSeen }; }, // what the picture shows: how thick the dust is, whether the LM's shadow is on screen
+  // What the picture shows: how thick the dust is, whether the LM's shadow is on screen, what the marks under it say.
+  scene() { return { dust: r.dustI, shadow: !!r.shadowSeen, marks: r.footQuality || null }; },
   hold(o) { Object.assign(input, o); }, // set the controls directly: { pad, throttle, rotate }
 };

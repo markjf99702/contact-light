@@ -7,6 +7,8 @@ import { groundAt, surfaceAt, boulderTop, nearBoulders, STEP, spotAt, litAt } fr
 import { toWorld, altitude, G_MOON } from './sim.js';
 import { drawLM, drawLLTV, drawAscentPlume, OUTLINE, setMinLine } from './craft.js';
 import { rng } from './rng.js';
+import { groundRank, one, shown, LIMITS } from './judge.js';
+import { tooFastAlong } from './calls.js';
 
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 const DEG = Math.PI / 180;
@@ -1137,6 +1139,7 @@ function craft(r, sc) {
 
 function footprint(r, sc) {
   const { f, g } = sc;
+  r.footQuality = null;
   if (f.phase !== 'flying') return;
   const alt = altitude(f);
   const fade = clamp((115 - alt) / 30, 0, 1) * clamp(alt / 1.5, 0, 1);
@@ -1145,11 +1148,14 @@ function footprint(r, sc) {
   const v = f.veh;
   const q = spotAt(g, f.x, v);
   const rest = Math.abs(q.rest);
-  const bad = rest > 12 || q.rock > 3 || q.bodyHit;
-  const fair = rest <= 6 && q.rock < 1.5 && !q.bellHit;
-  const good = rest <= 3 && q.rock < 0.5 && !q.bellHit;
-  const col = bad ? '255, 98, 82' : good ? '176, 240, 150' : fair ? '255, 214, 110' : '255, 160, 80';
-  r.footQuality = bad ? 'bad' : good ? 'good' : fair ? 'fair' : 'poor';
+  // The ground by the plaque's own limits: green gold, yellow silver, orange bronze, red no. Moving
+  // too fast along the ground to stop before the footpads touch, no ground is good: the marks go red
+  // and say how fast.
+  const rank = groundRank(q);
+  const speed = Math.abs(f.vx);
+  const rushing = tooFastAlong({ alt, rate: f.vy, fwd: f.vx }) || (alt < 20 && speed > LIMITS.side[2]);
+  const col = rushing || rank === 3 ? '255, 98, 82' : rank === 0 ? '176, 240, 150' : rank === 1 ? '255, 214, 110' : '255, 160, 80';
+  r.footQuality = rushing ? 'moving' : ['good', 'fair', 'poor', 'bad'][rank];
   ctx.save();
   ctx.globalAlpha = fade;
   ctx.strokeStyle = `rgba(${col}, .95)`;
@@ -1175,7 +1181,7 @@ function footprint(r, sc) {
   ctx.setLineDash([]);
   ctx.font = '700 11px "B612 Mono", ui-monospace, monospace';
   ctx.textAlign = 'center';
-  const label = q.rock >= 1.5 || q.bodyHit ? 'ROCK' : q.bellHit ? 'BUMP' : `${Math.round(rest)}°`;
+  const label = rushing ? `${Math.round(speed)} ${f.vx < 0 ? 'BACK' : 'FWD'}` : shown(q.rock) > LIMITS.rock[1] || q.bodyHit ? 'ROCK' : q.bellHit ? 'BUMP' : `${one(rest)}°`;
   // Above the marks while there's room; once the footpads come down to it, below the ground line.
   const mid = (yl + yr) / 2, pads = Y(f.y - v.cg);
   const ly = mid - pads > tick + 34 ? mid - tick - 6 : mid + r.band + 14;

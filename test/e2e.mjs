@@ -156,6 +156,20 @@ try {
   assert.equal(await page.locator('#plaque').isVisible(), false, 'no plaque for a crash');
   assert.equal(await page.textContent('#againBtn'), 'Try again');
 
+  // ---------- a newcomer who touches nothing ----------
+  // Tranquility Base at 14 ft/s down and 58 forward all the way: the radio says slow down, FWD goes
+  // red, the marks under the LM show the speed instead of a green angle, and the card names both.
+  await page.evaluate(() => { window.contactLight.fly('a11'); window.contactLight.speed(3); });
+  await until(() => window.contactLight.state().lines.some(l => /58 forward\. Slow it down\./.test(l)));
+  await until(() => window.contactLight.state().alt < 100);
+  assert.match(await page.getAttribute('#roFwd', 'class'), /\bbad\b/, 'FWD is red: it can\'t stop in time');
+  await until(() => window.contactLight.scene().marks === 'moving');
+  await until(() => window.contactLight.state().screen === 'result');
+  assert.equal(await page.textContent('#rTitle'), 'Hard landing');
+  assert.equal(await page.locator('#rRows .tier').count(), 2, 'only the two numbers that broke it are marked');
+  assert.match(await page.textContent('#rTip'), /tilt back until FWD reads 0/);
+  assert.doesNotMatch(await page.textContent('#loopList'), /looking good/i, 'nobody said it was going well');
+
   // ---------- out of fuel ----------
   await page.evaluate(() => { window.contactLight.fly('a14'); window.contactLight.setFuel(0.3); window.contactLight.speed(3); });
   await until(() => window.contactLight.state().lines.some(l => /Antares, Houston\. We copy the abort\./.test(l)));
