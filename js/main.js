@@ -739,8 +739,8 @@ renderSettings();
 showTitle();
 requestAnimationFrame(t => { last = t; frame(t); });
 
-// Offline copy.
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+// Offline copy. The one-file copy (data-single, from scripts/build.mjs) has no sw.js beside it to register.
+if ('serviceWorker' in navigator && location.protocol !== 'file:' && !('single' in document.documentElement.dataset)) {
   addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 
