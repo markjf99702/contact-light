@@ -218,6 +218,7 @@ details.how p { color: var(--ink2); font-size: 14px; margin: 8px 0 0; }
 .history { margin: 8px 0 0; font-size: 13.5px; color: var(--ink3); font-style: italic; }
 .goals { margin: 10px 0 0; font-size: 13px; color: var(--ink2); padding: 8px 10px; border-radius: 10px; background: rgba(230, 193, 96, .08); border: 1px solid rgba(230, 193, 96, .2); }
 .best { margin: 8px 0 0; font-size: 13px; color: var(--ink3); }
+.controls { margin: 14px 0 -4px; font-size: 13px; color: var(--ink2); text-align: center; }
 
 .pause .card { text-align: center; }
 .pause .settings { justify-content: center; }

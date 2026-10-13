@@ -13,7 +13,7 @@ import { createAutopilot, autopilotInput, chooseSpot } from '../js/autopilot.js'
 import { SITES, siteById } from '../js/sites.js';
 import { makeFreeSite } from '../js/freeflight.js';
 import { clean, recordLanding, quality } from '../js/store.js';
-import { STEPS } from '../js/coach.js';
+import { STEPS, ARCADE_STEPS, createCoach, coachUpdate } from '../js/coach.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DT = 1 / 60;
@@ -442,6 +442,29 @@ test('Free flight rolls new ground that can be landed, the same ground for the s
   const a = makeFreeSite(4321), b = makeFreeSite(4321);
   assert.equal(a.site.fuel, b.site.fuel);
   assert.deepEqual(a.site.start, b.site.start);
+});
+
+test('training teaches the controls of the mode you fly, step by step to the end', () => {
+  const site = siteById('ellington');
+  for (const mode of ['p66', 'arcade']) {
+    const g = buildGround({ ...site.ground, sun: site.sun });
+    const f = createFlight(site, g, mode);
+    const ap = createAutopilot(site, g, f.veh, mode);
+    const coach = createCoach(mode);
+    const seen = new Set();
+    while (f.t < 200 && f.phase === 'flying') {
+      step(f, autopilotInput(ap, f), DT);
+      seen.add(coachUpdate(coach, f, site, altitude(f)));
+    }
+    const steps = mode === 'arcade' ? ARCADE_STEPS : STEPS;
+    assert.equal(coach.step, steps.length - 1, `${mode}: the lesson ran to its last step`);
+    assert.ok(seen.size >= steps.length - 1, `${mode}: ${seen.size} steps shown`);
+  }
+  // Arcade has a throttle lever and no rate switch, so its lesson never asks for ▲ or ▼.
+  assert.ok(ARCADE_STEPS.every(st => !/[▲▼]/.test(st.text) && st.at !== 'rod'));
+  assert.match(ARCADE_STEPS[0].text, /throttle/);
+  assert.equal(ARCADE_STEPS[0].at, 'lever');
+  assert.match(STEPS[0].text, /Tap ▼ three times/);
 });
 
 // ---------- saved data and the rest ----------

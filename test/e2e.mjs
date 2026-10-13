@@ -110,6 +110,7 @@ try {
   await page.tap('#nextBtn');
   await page.locator('#brief').waitFor();
   assert.match(await page.textContent('#bText'), /West crater/);
+  assert.equal(await page.textContent('#bControls'), '▲ slows your descent · drag the hand controller to steer', 'the briefing names the two controls');
   await page.tap('#goBtn');
   await until(() => window.contactLight.state().site === 'a11' && window.contactLight.state().screen === 'flight');
   await until(() => window.contactLight.state().lines.some(l => /Eagle, Houston\. You're go for landing\./.test(l)));
@@ -133,6 +134,7 @@ try {
   await page.tap('#sitesBtn');
   await page.locator('#title').waitFor();
   assert.equal(await page.locator('[data-site=a11] .medal.gold').count(), 1, 'the gold plaque shows in the list');
+  assert.equal(await page.locator('[data-site=ellington] .start').count(), 0, 'Start here goes once Ellington is landed');
   await page.reload();
   await page.waitForFunction(() => window.contactLight && window.contactLight.demo());
   assert.equal(await page.locator('[data-site=a11] .medal.gold').count(), 1, 'and is still there after a reload');
@@ -183,6 +185,23 @@ try {
   await page.tap('[data-mode=arcade]');
   assert.match(await page.textContent('#modeNote'), /1979/);
   assert.equal(await page.locator('[data-site=a11] .medal.gold').count(), 0, 'Arcade keeps its own plaques');
+  // Training in Arcade teaches the throttle lever, not the rate switch Arcade doesn't have.
+  assert.equal(await page.locator('[data-site=ellington] .start').count(), 1, 'Start here, until Ellington is landed in Arcade too');
+  await page.tap('[data-site=ellington]');
+  await page.locator('#brief').waitFor();
+  await page.tap('#goBtn');
+  await until(() => window.contactLight.state().screen === 'flight' && window.contactLight.state().mode === 'arcade');
+  assert.match(await page.textContent('#coachText'), /This lever is the throttle/);
+  const [, , tl] = await centre('.lever-track');
+  const bubble = await page.locator('#coach').boundingBox();
+  assert.ok(bubble.y + bubble.height <= (await page.locator('#panel').boundingBox()).y, 'the hint sits above the panel, clear of the THROTTLE label');
+  await touch('touchStart', [[tl.x + tl.width / 2, tl.y + tl.height * 0.62]]);
+  await touch('touchMove', [[tl.x + tl.width / 2, tl.y + tl.height * 0.72]]);
+  await touch('touchEnd', []);
+  await until(() => /Push the throttle back up/.test(document.getElementById('coachText').textContent));
+  await page.tap('#menuBtn');
+  await page.tap('#quitBtn');
+  await page.locator('#title').waitFor();
   await page.tap('[data-site=a11]');
   await page.locator('#brief').waitFor();
   await page.tap('#goBtn');

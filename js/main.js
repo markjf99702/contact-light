@@ -139,7 +139,7 @@ function newFlight(site, m, opts = {}) {
     radio: createRadio(site),
     log: [], pending: [], ended: false, judged: null, endT: 0, ending: null,
     ap: opts.autopilot ? createAutopilot(site, g, f.veh, m === 'arcade' ? 'arcade' : 'p66') : null,
-    coach: site.training && !opts.autopilot ? createCoach() : null,
+    coach: site.training && !opts.autopilot ? createCoach(m === 'arcade' ? 'arcade' : 'p66') : null,
     demo: !!opts.demo,
     jetT: 0,
   };
@@ -190,12 +190,13 @@ function show(name) {
 // The part of the screen the camera frames: between the numbers and the panel in flight, the open
 // sky above the title card on a phone.
 let view = { top: 0, bottom: 600 };
+let corners = false; // a phone on its side, with the controls in the bottom corners
 function layout() {
   resizeRenderer(r, innerWidth, innerHeight);
+  corners = matchMedia('(orientation: landscape) and (max-height: 520px)').matches;
   if (!$('hud').hidden) {
     const hb = $('hud').getBoundingClientRect().bottom;
     // On a phone on its side the controls sit in the corners, so the flight runs down to the lamps.
-    const corners = matchMedia('(orientation: landscape) and (max-height: 520px)').matches;
     let pt = (corners ? $('panel').querySelector('.lamps') : $('panel')).getBoundingClientRect().top - (corners ? 6 : 0);
     // Training's hints sit just above the panel: keep the ground clear of them.
     if (cur && cur.coach) pt -= 92;
@@ -283,6 +284,7 @@ function onEvent(c, e) {
     case 'touchdown':
     case 'abort': {
       const j = judge(e.record, c.site);
+      const probes = c.f.veh.probes.length > 0; // the LLTV has none, so no contact light at Ellington
       c.judged = j;
       c.record = e.record;
       c.ended = true;
@@ -294,7 +296,7 @@ function onEvent(c, e) {
         else { bump(r, 2); sound.play('thud'); sound.buzz(35); }
       } else sound.play('abort');
       sound.engine(0);
-      $('lampContact').classList.toggle('on', j.outcome === 'landed' || $('lampContact').classList.contains('on'));
+      $('lampContact').classList.toggle('on', (probes && j.outcome === 'landed') || $('lampContact').classList.contains('on'));
       c.ending = endingLines(c.site, j);
       c.pending = c.pending.filter(l => l.big); // drop calls that hadn't been made
       for (const l of c.ending.lines) c.pending.push({ ...l, at: l.at });
@@ -387,7 +389,10 @@ function draw(c, dt) {
     const box = $('coach');
     box.hidden = false;
     setText('coachText', st.text);
-    const target = st.at === 'rod' ? $('rod') : st.at === 'aca' ? $('aca') : null;
+    const target = st.at === 'rod' ? $('rod') : st.at === 'aca' ? $('aca') : st.at === 'lever' ? $('lever') : null;
+    // Just above the panel, whichever controls it holds (Arcade's throttle lever stands taller).
+    if (!corners) box.style.bottom = `${Math.round(innerHeight - $('panel').getBoundingClientRect().top + 12)}px`;
+    else box.style.bottom = '';
     if (target) {
       const tb = target.getBoundingClientRect(), bb = box.getBoundingClientRect();
       box.style.setProperty('--arrow', `${Math.max(16, Math.min(bb.width - 16, tb.left + tb.width / 2 - bb.left))}px`);
@@ -443,7 +448,7 @@ function renderTitle() {
     b.className = 'site';
     b.dataset.site = s.id;
     const e = best[s.id];
-    const first = s.training && !store.flights;
+    const first = s.training && !e; // until you've landed at Ellington in this mode
     b.innerHTML = `<span><span class="nm">${s.name} <span>· ${s.place}</span>${first ? ' <em class="start">Start here</em>' : ''}</span><span class="sub">${s.training ? 'Learn the controls in the LLTV' : `${s.craft} · ${s.date}`}</span></span><span class="medal ${e ? e.tier : ''}" aria-label="${e ? e.tier + ' plaque' : 'no plaque yet'}">${e ? e.tier[0].toUpperCase() : ''}</span>`;
     b.addEventListener('click', () => showBrief(s));
     li.append(b);
@@ -504,6 +509,9 @@ function showBrief(site) {
   const e = store.best[mode === 'arcade' ? 'arcade' : 'p66'][site.id];
   $('bBest').textContent = e ? `Your best${mode === 'arcade' ? ' in Arcade' : ''}: ${e.tier}, ${e.down} ft/s down, ${feet(e.dist)} away.` : '';
   $('goBtn').textContent = mode === 'arcade' ? 'Take over (Arcade)' : 'Take over';
+  // The two controls in a line, for anyone who skipped the training.
+  $('bControls').textContent = mode === 'arcade' ? 'Throttle up to slow your descent · drag to rotate' : '▲ slows your descent · drag the hand controller to steer';
+  $('bControls').hidden = !!site.training;
   requestAnimationFrame(() => drawProfile($('bProfile'), groundFor(site), site, { labels: true, start: true }));
 }
 $('goBtn').addEventListener('click', () => startFlight(briefSite, mode === 'free' ? 'p66' : mode));
