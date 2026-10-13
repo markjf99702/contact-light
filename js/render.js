@@ -167,14 +167,11 @@ function buildBackdrop(site) {
     layers.push({ earth: true });
     return layers;
   }
-  const big = site.backdrop;
-  if (big === 'apennines') {
-    layers.push({ massif: true, p: 0.05, col: [44, 42, 40], lit: [150, 143, 132], pts: massif([[-1800, 0], [-1500, 70], [-1200, 165], [-980, 150], [-700, 70], [-420, 28], [-260, 60], [-80, 120], [160, 205], [430, 240], [760, 190], [1100, 60], [1400, 0]]) });
-  } else if (big === 'massifs') {
-    layers.push({ massif: true, p: 0.05, col: [42, 40, 38], lit: [146, 139, 128], pts: massif([[-1500, 0], [-1200, 90], [-900, 150], [-620, 140], [-420, 210], [-150, 250], [120, 235], [380, 170], [560, 115], [760, 160], [1000, 200], [1300, 120], [1600, 0]]) });
-  } else if (big === 'highlands') {
-    layers.push({ massif: true, p: 0.06, col: [50, 48, 45], lit: [156, 150, 140], pts: massif([[-1500, 0], [-1100, 70], [-700, 110], [-350, 85], [0, 120], [300, 95], [700, 135], [1100, 80], [1500, 0]]) });
-  }
+  // The mountains: Hadley's Apennine front, the rolling Descartes highlands, the massifs walling in
+  // Taurus–Littrow. Heights are in the same units as the far hills; the middle of each is what a
+  // phone shows, the rest is there for wider screens.
+  const big = MOUNTAINS[site.backdrop];
+  if (big) layers.push({ massif: true, p: 0.05, knots: big, pts: massif(big), key: site.backdrop, sun: site.sun || 10 });
   ridge(160, 2400, 26, 160, 18, 0.16, [42, 41, 39], [104, 99, 91]);
   ridge(200, 2600, 14, 90, 6, 0.28, [34, 33, 31], [92, 87, 80]);
   return layers;
@@ -206,8 +203,13 @@ function backdrop(r, sc) {
   const base = r.Y(datum / 5) + 2;
   for (const L of r.bg) {
     if (L.earth) { earthBackdrop(r, base, bs); continue; }
+    if (L.massif) {
+      // Squeezed along the track, so a phone's width takes in whole mountains.
+      const bx = bs * MASSIF_SQUEEZE;
+      massifLayer(r, L, x => r.ox + (x - cam.cx * L.p) * bx, base, bx, bs);
+      continue;
+    }
     const X = x => r.ox + (x - cam.cx * L.p) * bs;
-    if (L.massif) { massifLayer(ctx, L, X, base, bs); continue; }
     ctx.beginPath();
     ctx.moveTo(X(L.pts[0][0]), base + 400);
     for (const [x, h] of L.pts) ctx.lineTo(X(x), base - h * bs);
@@ -234,43 +236,101 @@ function backdrop(r, sc) {
   }
 }
 
-// A mountain lit from the left: faces turned to the Sun bright, faces turned away in shade, and
-// darker toward its foot.
-function massifLayer(ctx, L, X, base, bs) {
-  const LEVELS = 14;
-  const paths = Array.from({ length: LEVELS }, () => new Path2D());
-  const outline = new Path2D();
-  outline.moveTo(X(L.pts[0][0]), base + 400);
-  for (let k = 0; k < L.pts.length; k++) outline.lineTo(X(L.pts[k][0]), base - L.pts[k][1] * bs);
-  outline.lineTo(X(L.pts[L.pts.length - 1][0]), base + 400);
-  outline.closePath();
-  for (let k = 1; k < L.pts.length; k++) {
-    const [x0, h0] = L.pts[k - 1], [x1, h1] = L.pts[k];
-    const a0 = L.pts[Math.max(0, k - 5)], a1 = L.pts[Math.min(L.pts.length - 1, k + 4)];
-    const slope = (a1[1] - a0[1]) / Math.max(1, a1[0] - a0[0]);
-    const t = clamp(0.42 + slope * 1.6, 0, 1);
-    const lv = Math.round(t * (LEVELS - 1));
-    const a = X(x0) - 0.5, b = X(x1) + 0.5;
-    paths[lv].moveTo(a, base - h0 * bs);
-    paths[lv].lineTo(b, base - h1 * bs);
-    paths[lv].lineTo(b, base + 400);
-    paths[lv].lineTo(a, base + 400);
-    paths[lv].closePath();
+const MOUNTAINS = {
+  apennines: [[-1500, 0], [-1150, 48], [-850, 92], [-640, 84], [-420, 54], [-300, 58], [-160, 86], [20, 122], [170, 136], [330, 128], [520, 92], [800, 62], [1050, 74], [1300, 36], [1600, 0]],
+  massifs: [[-1500, 0], [-1150, 52], [-900, 80], [-720, 74], [-560, 50], [-380, 90], [-180, 120], [60, 128], [260, 116], [430, 80], [560, 54], [760, 66], [980, 86], [1200, 60], [1500, 0]],
+  highlands: [[-1500, 0], [-1150, 30], [-800, 50], [-520, 40], [-260, 58], [40, 68], [300, 52], [560, 46], [820, 64], [1100, 40], [1500, 0]],
+};
+
+// A mountain range lit by the low Sun on the left, worked out a pixel at a time once per site and kept.
+// It's a ridge under its skyline: at a height v below a crest of height h the slope comes toward you,
+// so the surface there faces partly along the track (the crest's slope, exaggerated, since the real
+// massifs are far steeper than a skyline this flat suggests) and partly toward you. Faint gullies run
+// down the faces. Lit flanks face left, toward the Sun; the far flanks fall into shade.
+const MASSIF_RES = 0.5; // pixels per unit: the faces are smooth, and the skyline is clipped crisply
+const MASSIF_SQUEEZE = 0.6;
+const massifs = new Map();
+function massifImage(L) {
+  const id = `${L.key}:${L.sun}`;
+  if (massifs.has(id)) return massifs.get(id);
+  const pts = L.pts, res = MASSIF_RES;
+  const x0 = pts[0][0], x1 = pts[pts.length - 1][0];
+  const hmax = Math.max(...pts.map(q => q[1]));
+  const W = Math.ceil((x1 - x0) * res) + 1, H = Math.ceil((hmax + 4) * res);
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const cx = canvas.getContext('2d');
+  const img = cx.createImageData(W, H);
+  const D = img.data;
+  const hs = new Float32Array(W), hp = new Float32Array(W);
+  let k = 0;
+  for (let i = 0; i < W; i++) {
+    const u = x0 + i / res;
+    while (k < pts.length - 2 && pts[k + 1][0] < u) k++;
+    const [ax, ay] = pts[k], [bx, by] = pts[k + 1];
+    hs[i] = ay + ((by - ay) * clamp((u - ax) / (bx - ax), 0, 1));
   }
-  for (let lv = 0; lv < LEVELS; lv++) {
-    const t = lv / (LEVELS - 1);
-    const c = L.col.map((v, i) => v + (L.lit[i] - v) * t);
-    ctx.fillStyle = rgb(c);
-    ctx.fill(paths[lv]);
+  const sw = Math.max(1, Math.round(18 * res));
+  for (let i = 0; i < W; i++) {
+    const a = Math.max(0, i - sw), b = Math.min(W - 1, i + sw);
+    hp[i] = (hs[b] - hs[a]) / ((b - a) / res);
   }
-  const top = Math.max(...L.pts.map(p => p[1]));
-  const fade = ctx.createLinearGradient(0, base - top * bs, 0, base + 40);
-  const f = Math.min(0.98, (top * bs) / (top * bs + 40));
-  fade.addColorStop(0, 'rgba(3,3,4,0)');
-  fade.addColorStop(f, 'rgba(3,3,4,.45)');
-  fade.addColorStop(1, 'rgba(3,3,4,1)');
-  ctx.fillStyle = fade;
-  ctx.fill(outline);
+  const R = rng(L.key.length * 7 + 3);
+  const waves = Array.from({ length: 4 }, () => {
+    const wl = 26 + R() * 50;
+    return { f: (2 * Math.PI) / wl, g: (2 * Math.PI) / (wl * (4 + R() * 4)), ph: R() * 6.283, a: ((0.1 + 0.08 * R()) * wl) / 60 };
+  });
+  const e = L.sun * DEG, depth = 2.6 * hmax, RELIEF = 2.6;
+  let lx = -Math.cos(e), ly = 0.26, lz = Math.sin(e) + 0.08;
+  const ll = Math.hypot(lx, ly, lz);
+  lx /= ll; ly /= ll; lz /= ll;
+  const lit = [150, 144, 133], dark = [30, 29, 28];
+  for (let i = 0; i < W; i++) {
+    const u = x0 + i / res, top = hs[i];
+    if (top <= 0.2) continue;
+    for (let j = 0; j < H; j++) {
+      const v = (H - 1 - j) / res;
+      if (v > top + 3 / res) continue; // a little above the crest too, for the clip's edge to fall on
+      const q = clamp(v / top, 0, 1), yy = Math.sqrt(1 - q);
+      let dn = 0;
+      for (const w of waves) dn += w.a * w.f * Math.cos(w.f * u + w.g * yy * depth + w.ph);
+      const gx = hp[i] * q * RELIEF + dn * 1.6 * Math.min(1, yy * 2.2);
+      const gy = (-2 * top * yy) / depth;
+      const nl = Math.hypot(gx, gy, 1);
+      const L2 = Math.max(0, (-gx * lx - gy * ly + lz) / nl);
+      const t = 0.07 + 0.93 * Math.pow(L2, 1.05);
+      const o = (j * W + i) * 4;
+      D[o] = dark[0] + (lit[0] - dark[0]) * t;
+      D[o + 1] = dark[1] + (lit[1] - dark[1]) * t;
+      D[o + 2] = dark[2] + (lit[2] - dark[2]) * t;
+      D[o + 3] = 255;
+    }
+  }
+  cx.putImageData(img, 0, 0);
+  const m = { canvas, x0, res, H };
+  massifs.set(id, m);
+  return m;
+}
+
+function massifLayer(r, L, X, base, bx, bs) {
+  const { ctx, W } = r;
+  const m = massifImage(L);
+  // Only the part on screen.
+  const ua = Math.max(m.x0, L.pts[0][0] + (0 - X(L.pts[0][0])) / bx - 4);
+  const ub = Math.min(L.pts[L.pts.length - 1][0], L.pts[0][0] + (W - X(L.pts[0][0])) / bx + 4);
+  if (ub <= ua) return;
+  ctx.save();
+  const sky = new Path2D();
+  sky.moveTo(X(ua), base + 2);
+  for (const [x, h] of L.pts) if (x >= ua - 30 && x <= ub + 30) sky.lineTo(X(x), base - h * bs);
+  sky.lineTo(X(ub), base + 2);
+  sky.closePath();
+  ctx.clip(sky);
+  const sx = (ua - m.x0) * m.res, sw = (ub - ua) * m.res;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(m.canvas, sx, 0, sw, m.H, X(ua), base - (m.H / m.res) * bs, (ub - ua) * bx, (m.H / m.res) * bs);
+  ctx.restore();
 }
 
 // Ellington: a tree line, the hangars and a water tower across the field.
