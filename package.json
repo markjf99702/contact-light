@@ -1,0 +1,10 @@
+{
+  "name": "contact-light",
+  "private": true,
+  "type": "module",
+  "description": "Land on the Moon the way Armstrong did, a click at a time.",
+  "scripts": {
+    "start": "npx --yes http-server -c-1 -p 8080 .",
+    "test": "node --test --test-concurrency=1 test/unit.test.mjs"
+  }
+}
