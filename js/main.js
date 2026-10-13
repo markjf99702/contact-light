@@ -409,6 +409,9 @@ function flag(id, cls) { const el = $(id); el.classList.toggle('warn', cls === '
 function nextDemo(site) {
   const pick = site || MISSIONS[demoIndex++ % MISSIONS.length];
   demo = newFlight(pick, 'p66', { autopilot: true, demo: true });
+  // Behind the title, join the flight a little way down, where the LM is bigger and there's more to
+  // see. A briefing shows its site from low gate.
+  if (!site) for (let t = 0; t < 14; t += STEP) step(demo.f, autopilotInput(demo.ap, demo.f), STEP);
 }
 
 // ---------- title ----------
