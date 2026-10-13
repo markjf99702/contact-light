@@ -1,7 +1,7 @@
 // The landers, drawn side-on in feet with y up, from the footpads. The LM: 31 ft across the footpads,
 // about 23 ft tall, gold and black foil on the descent stage, the grey ascent stage on top. Seen from
 // the side you see the aft leg (left), the forward leg with the ladder and porch (right, and no probe:
-// the crews had it taken off), and the near side leg in front of the engine bell.
+// a bent one could have torn a suit on the way down), and the near side leg in front of the engine bell.
 // The LLTV is Ellington's jet-lifted trainer: a frame on four legs with a jet in the middle.
 
 const GOLD = ['#f3d98a', '#d8b058', '#a97d2f', '#6e4f1b'];

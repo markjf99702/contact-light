@@ -73,7 +73,7 @@ export const SITES = [
     start: { x: 0, alt: 520, vx: 58, vy: -14 },
     target: { x: 640, tiers: [1300, 1800], label: 'TARGET' },
     brief: 'Low gate: 500 feet up and still going forward at nearly 60 ft/s. The computer is taking you into the boulder field around West crater, a hole about 540 feet across. Take over, fly past it, and land on smooth ground as near the computer’s spot as you can.',
-    history: 'Armstrong took over at about 540 feet and flew on past the crater. He landed with less fuel to spare than any crew after him.',
+    history: 'Armstrong took over a little under 500 feet up and flew on past the crater. He landed with less fuel to spare than any crew after him.',
   },
   {
     id: 'a12',
@@ -248,7 +248,7 @@ export const SITES = [
     start: { x: 0, alt: 310, vx: 30, vy: -15 },
     target: { x: 860, tiers: [300, 800], label: 'TARGET' },
     brief: 'The Descartes highlands: ridges, craters on craters, and blocks the size of cars. You’re running a little long past Double Spot. Find a level patch between the rocks.',
-    history: 'John Young set Orion down among the blocks, about 200 meters north of Double Spot. “We don’t have to walk far to pick up rocks, Houston. We’re among them!”',
+    history: 'John Young set Orion down among the blocks, a couple of hundred meters north of Double Spot. “We don’t have to walk far to pick up rocks, Houston. We’re among them!”',
   },
   {
     id: 'a17',
@@ -292,8 +292,8 @@ export const SITES = [
     },
     start: { x: 0, alt: 500, vx: 45, vy: -25 },
     target: { x: 900, tiers: [250, 700], label: 'TARGET' },
-    brief: 'Taurus–Littrow is a valley between mountains taller than the Grand Canyon is deep. You’re coming in high and fast. The planned spot is among small craters about 2,000 feet short of Camelot.',
-    history: 'Gene Cernan came in a little high, caught it, and kept a little forward speed all the way down, so he’d land on ground he had just seen.',
+    brief: 'Taurus–Littrow is a valley between mountains taller than the Grand Canyon is deep. You’re coming down fast, 25 feet per second at 500 feet. The planned spot is among small craters about 2,000 feet short of Camelot.',
+    history: 'Gene Cernan came down nearly twice as fast as planned, slowed it late, and kept a little forward speed all the way down, so he’d land on ground he had just seen.',
   },
 ];
 
