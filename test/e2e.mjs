@@ -64,8 +64,8 @@ try {
   assert.match(await page.textContent('#bPlace'), /Ellington/);
   await page.tap('#goBtn');
   await until(() => window.contactLight.state().screen === 'flight');
+  await until(() => /Tap ▼ three times/.test(document.getElementById('coachText').textContent));
   assert.equal(await page.locator('#coach').isVisible(), true, 'training shows hints');
-  assert.match(await page.textContent('#coachText'), /Tap ▼ three times/);
   for (let k = 0; k < 3; k++) { await page.tap('#rodDown'); await page.waitForTimeout(120); }
   await until(() => window.contactLight.state().rate === -3);
   assert.equal(await page.textContent('#rodRead'), 'DOWN 3');
@@ -223,7 +223,7 @@ try {
   await page.locator('#brief').waitFor();
   await page.tap('#goBtn');
   await until(() => window.contactLight.state().screen === 'flight' && window.contactLight.state().mode === 'arcade');
-  assert.match(await page.textContent('#coachText'), /This lever is the throttle/);
+  await until(() => /This lever is the throttle/.test(document.getElementById('coachText').textContent));
   const [, , tl] = await centre('.lever-track');
   const bubble = await page.locator('#coach').boundingBox();
   assert.ok(bubble.y + bubble.height <= (await page.locator('#panel').boundingBox()).y, 'the hint sits above the panel, clear of the THROTTLE label');

@@ -156,6 +156,7 @@ function startFlight(site, m = mode) {
   $('hudName').textContent = site.free ? 'Free flight' : site.name;
   $('hudPlace').textContent = site.free ? `${site.place} · ground ${site.seed}` : site.place;
   $('radio').textContent = '';
+  setText('coachText', ''); // the last flight's hint goes with it
   $('lampLow').classList.remove('on');
   $('lampContact').classList.remove('on');
   $('clock').hidden = true;
