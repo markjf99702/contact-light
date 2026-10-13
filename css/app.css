@@ -313,7 +313,7 @@ details.loop li b { font-weight: 700; margin-right: .1em; }
   .lever { grid-column: 1; }
   .lever-track { height: 92px; }
   .keys { display: none !important; }
-  .coach { bottom: calc(60px + var(--safe-b)); }
+  .coach { bottom: calc(60px + var(--safe-b)); width: min(400px, calc(100vw - 420px)); left: calc(50% - 59px); } /* between the two corners */
   .skip { bottom: auto; top: calc(96px + var(--safe-t)); right: calc(16px + env(safe-area-inset-right, 0px)); } /* under the clock, off the hand controller */
 }
 @media (prefers-reduced-motion: reduce) {
