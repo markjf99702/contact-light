@@ -461,37 +461,24 @@ function terrain(r, sc) {
     }
   }
   sctx.putImageData(img, 0, 0);
-  const face = new Path2D(), fades = [new Path2D(), new Path2D(), new Path2D()];
-  let ytop = Infinity, ybot = -Infinity;
-  for (let k = 0; k < cols; k++) {
-    const i = idx[k], j = idx[k + 1];
-    const x0 = sx(i) - 0.4, x1 = sx(j) + 0.4, y0 = sy(i), y1 = sy(j);
-    face.moveTo(x0, y0);
-    face.lineTo(x1, y1);
-    face.lineTo(x1, y1 + band);
-    face.lineTo(x0, y0 + band);
-    face.closePath();
-    ytop = Math.min(ytop, y0, y1);
-    ybot = Math.max(ybot, y0, y1);
-    // The lower part of the band fades into the ground below it, so a shadow is a darker patch
-    // along the top rather than a dark brick.
-    [[0.3, 0.55], [0.55, 0.8], [0.8, 1.04]].forEach(([a, b], q) => {
-      const p = fades[q];
-      p.moveTo(x0, y0 + band * a);
-      p.lineTo(x1, y1 + band * a);
-      p.lineTo(x1, y1 + band * b + 0.6);
-      p.lineTo(x0, y0 + band * b + 0.6);
-      p.closePath();
-    });
-  }
+  // One shape for the band, from the ground line down by its depth, filled with the strip: each of
+  // its pixels spans one stretch, and smoothing blends them. The lower part of the band then fades
+  // into the ground below it, so a shadow is a darker patch along the top rather than a dark brick.
+  const strap = (a, b) => {
+    const p = new Path2D();
+    p.moveTo(sx(idx[0]), sy(idx[0]) + band * a);
+    for (let k = 1; k <= cols; k++) p.lineTo(sx(idx[k]), sy(idx[k]) + band * a);
+    for (let k = cols; k >= 0; k--) p.lineTo(sx(idx[k]), sy(idx[k]) + band * b);
+    p.closePath();
+    return p;
+  };
   if (cols > 0) {
-    ctx.save();
-    ctx.clip(face);
+    const pat = ctx.createPattern(strip, 'repeat-y');
+    pat.setTransform(new DOMMatrix([segPx, 0, 0, 1, sx(idx[0]) - segPx, 0])); // strip pixel k + 1 is stretch k
     ctx.imageSmoothingEnabled = true;
-    const xa0 = sx(idx[0]), xb0 = sx(idx[cols]);
-    ctx.drawImage(strip, 1, 1, cols, 1, xa0, ytop - 1, xb0 - xa0, ybot - ytop + band + 2);
-    ctx.restore();
-    [0.22, 0.42, 0.62].forEach((a, q) => { ctx.fillStyle = rgb(pal.soil, 0.7, a); ctx.fill(fades[q]); });
+    ctx.fillStyle = pat;
+    ctx.fill(strap(0, 1));
+    [[0.3, 0.55, 0.22], [0.55, 0.8, 0.42], [0.8, 1.04, 0.62]].forEach(([a, b, al]) => { ctx.fillStyle = rgb(pal.soil, 0.7, al); ctx.fill(strap(a, b)); });
   }
 
   // Pebbles and small pits on the surface band, fixed to the ground so they slide past.
