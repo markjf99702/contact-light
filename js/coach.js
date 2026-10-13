@@ -93,7 +93,7 @@ export const ARCADE_STEPS = [
   },
   {
     at: 'aca',
-    text: 'Drag the controller right: the LM keeps turning while you hold it. Lean a little forward to fly toward the pad, with a touch more throttle, since leaning takes lift away.',
+    text: 'Drag the controller right to lean a little toward the pad: it keeps turning while you hold it. Leaning takes lift away, so add a touch of throttle.',
     done: (f) => f.vx > 6,
   },
   {

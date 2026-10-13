@@ -50,7 +50,7 @@ export function literalPilot(mode, site) {
     } else if (/Push the throttle up past a third until DOWN reads 0/.test(text)) {
       if (read && !me.phase) me.phase = 'push';
       if (me.phase === 'push') { me.throttle = 0.37; if (f.vy > -0.3) { me.throttle = 1 / 3; me.phase = 'hover'; } }
-    } else if (/Lean a little forward to fly toward the pad/.test(text)) {
+    } else if (/lean a little toward the pad/.test(text)) {
       if (read) rotate = lean(f, 8);
       vyWant = 0;
     } else if (/Drag left until the controller reads UPRIGHT/.test(text)) {
