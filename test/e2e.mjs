@@ -339,9 +339,14 @@ try {
   assert.equal(await page.textContent('#soundBtn'), 'Sound off');
   assert.equal(await page.getAttribute('[data-mode=free]', 'aria-checked'), 'true', 'it comes back to the mode you left');
 
-  // ---------- offline ----------
+  // ---------- installable, and offline ----------
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.waitForFunction(() => navigator.serviceWorker.controller, null, LONG);
+  const { installabilityErrors } = await cdp.send('Page.getInstallabilityErrors');
+  assert.deepEqual(installabilityErrors, [], 'Chrome says it can’t install it');
+  const manifest = await cdp.send('Page.getAppManifest');
+  assert.deepEqual(manifest.errors, [], 'the manifest has errors');
+  assert.equal(JSON.parse(manifest.data).name, 'Contact Light');
   await ctx.setOffline(true);
   await page.reload();
   await page.waitForFunction(() => window.contactLight && window.contactLight.demo());
