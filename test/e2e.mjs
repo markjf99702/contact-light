@@ -323,6 +323,7 @@ try {
   await page.tap('#freeNew');
   await page.tap('#freeGo');
   await until(() => window.contactLight.state().site === 'free' && window.contactLight.state().screen === 'flight');
+  assert.match(await page.textContent('#hudName'), /^Ground \d+$/, 'the ground\'s number leads the name, so it shows beside the clock');
   await page.evaluate(() => { window.contactLight.autopilot(true); window.contactLight.speed(6); });
   await until(() => window.contactLight.state().screen === 'result');
   assert.equal((await state()).judged.outcome, 'landed');
@@ -391,6 +392,11 @@ try {
   await sp.evaluate(() => { window.contactLight.fly('a14'); window.contactLight.setFuel(5.7); window.contactLight.speed(2); });
   await sp.waitForFunction(() => window.contactLight.state().low, null, LONG);
   await sp.evaluate(() => window.contactLight.speed(0));
+  // The Triplet craters' names are ahead, low on the right: none runs under the corner controls.
+  const corners = await sp.$$eval('#rod, #aca', els => els.map(e => { const b = e.getBoundingClientRect(); return [b.left, b.top, b.right, b.bottom]; }));
+  for (const l of (await sp.evaluate(() => window.contactLight.scene())).labels.filter(q => q.alpha > 0.05)) {
+    for (const [a, b, c, d] of corners) assert.ok(l.box[2] < a || l.box[0] > c || l.box[3] < b || l.box[1] > d, `${l.text} is under a control`);
+  }
   const clock = await sp.locator('#clock').boundingBox();
   assert.ok(clock && clock.x > 844 / 2, `the clock is on the right (${clock && clock.x})`);
   for (const p of await sp.locator('#radio p').all()) {

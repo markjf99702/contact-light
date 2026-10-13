@@ -709,6 +709,7 @@ function marks(r, sc) {
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
+  r.labels = []; // what was written where, for the tests
   // Crater names, while you're high enough for them to help.
   const la = clamp((alt - 35) / 60, 0, 1) * (site.world === 'earth' ? 0 : 1);
   if (la > 0) {
@@ -719,12 +720,14 @@ function marks(r, sc) {
       let hi = -Infinity;
       for (let k = -1; k <= 1; k++) hi = Math.max(hi, groundAt(g, l.x + k * (l.r || 40)));
       const y = Math.min(Y(hi) - 16, Y(groundAt(g, l.x)) - 16);
-      // Names fade out at the edges of the screen rather than being cut off there.
+      // Names fade out at the edges of the screen rather than being cut off there, and as they
+      // come near the numbers or the controls rather than running under them.
       const text = l.name.toUpperCase(), hw = ctx.measureText(text).width / 2, x = X(l.x);
-      const edge = clamp((Math.min(x - hw, W - x - hw) + 4) / 24, 0, 1);
+      const edge = clamp((Math.min(x - hw, W - x - hw) + 4) / 24, 0, 1) * clearOf(sc.view, x - hw, y - 9, x + hw, y + 3);
       if (edge <= 0) continue;
       ctx.fillStyle = `rgba(232, 226, 214, ${0.62 * la * edge})`;
       ctx.fillText(text, x, y);
+      r.labels.push({ text, box: [x - hw, y - 9, x + hw, y + 3], alpha: la * edge });
     }
   }
   // The target.
@@ -750,9 +753,19 @@ function marks(r, sc) {
     ctx.fill();
     ctx.font = '700 10px "B612 Mono", ui-monospace, monospace';
     ctx.letterSpacing = '0.06em';
-    ctx.fillText(site.target.label, clamp(X(tx), 46, W - 46), top - 10);
+    const lx = clamp(X(tx), 46, W - 46), hw = ctx.measureText(site.target.label).width / 2;
+    ctx.globalAlpha = clearOf(sc.view, lx - hw, top - 19, lx + hw, top - 7);
+    ctx.fillText(site.target.label, lx, top - 10);
   }
   ctx.restore();
+}
+
+// 1 where a box on screen is well clear of the numbers and the controls (view.keepOut), fading to 0
+// as it comes within a dozen pixels of them.
+function clearOf(view, x0, y0, x1, y1) {
+  let k = 1;
+  for (const [a, b, c, d] of view.keepOut || []) k = Math.min(k, clamp(Math.max(a - x1, x0 - c, b - y1, y0 - d) / 12, 0, 1));
+  return k;
 }
 
 // Off the edge of the screen? A pointer to the target with its distance.

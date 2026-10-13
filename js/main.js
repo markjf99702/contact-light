@@ -153,8 +153,9 @@ function startFlight(site, m = mode) {
   keyTilt = 0;
   held.keys.clear();
   for (const l of openingLines(site)) cur.pending.push({ ...l, at: l.at });
-  $('hudName').textContent = site.free ? 'Free flight' : site.name;
-  $('hudPlace').textContent = site.free ? `${site.place} · ground ${site.seed}` : site.place;
+  // Free flight leads with the ground's number, so it shows even beside Houston's clock.
+  $('hudName').textContent = site.free ? `Ground ${site.seed}` : site.name;
+  $('hudPlace').textContent = site.place;
   $('radio').textContent = '';
   $('moment').hidden = true;
   setText('coachText', ''); // the last flight's hint goes with it
@@ -222,7 +223,7 @@ function layout() {
     let pt = (corners ? $('panel').querySelector('.lamps') : $('panel')).getBoundingClientRect().top - (corners ? 6 : 0);
     // Training's hints sit just above the panel: keep the ground clear of them.
     if (cur && cur.coach) pt -= 92;
-    view = { top: Math.max(0, hb - (corners ? 0 : 34)), bottom: Math.max(hb + 120, pt) };
+    view = { top: Math.max(0, hb - (corners ? 0 : 34)), bottom: Math.max(hb + 120, pt), keepOut: keepOut() };
   } else if (screen === 'title' && innerWidth < 760) {
     const sheet = $('title'), keep = sheet.scrollTop;
     sheet.scrollTop = 0;
@@ -237,6 +238,17 @@ function layout() {
   } else view = { top: 20, bottom: innerHeight - 20 };
 }
 addEventListener('resize', layout);
+
+// Where names drawn in the scene mustn't go: under the numbers and the radio, and under the controls
+// (with a phone on its side, the two boxes in the bottom corners). The radio grows and shrinks as
+// lines come and go, so it's measured again with each line.
+function keepOut() {
+  const hud = $('hud').getBoundingClientRect();
+  const rects = [[0, 0, innerWidth, hud.bottom + 2]];
+  const boxes = corners ? [$('rod'), $('lever'), $('aca')].filter(el => !el.hidden) : [$('panel')];
+  for (const el of boxes) { const b = el.getBoundingClientRect(); rects.push([b.left - 2, b.top - 2, b.right + 2, b.bottom + 2]); }
+  return rects;
+}
 
 // ---------- the loop ----------
 
@@ -353,6 +365,7 @@ function say(c, l) {
   while (box.children.length > (innerWidth < 600 ? 2 : 3)) box.firstChild.remove();
   const ps = [...box.children];
   ps.forEach((el, k) => { el.classList.toggle('old', k === ps.length - 2); el.classList.toggle('older', k < ps.length - 2); });
+  if (view.keepOut && !c.demo) view.keepOut = keepOut();
   if (!c.demo) {
     sound.radioLine(l);
     c.log.push({ t: c.ended ? c.f.touchAt + c.endT : c.f.t, who: l.who, text: l.text });
@@ -747,6 +760,6 @@ window.contactLight = {
   demo() { return demo && { site: demo.site.id, phase: demo.f.phase, alt: altitude(demo.f), vx: demo.f.vx }; },
   drawing() { return r.key; },
   // What the picture shows: how thick the dust is, whether the LM's shadow is on screen, what the marks under it say.
-  scene() { return { dust: r.dustI, shadow: !!r.shadowSeen, marks: r.footQuality || null, lm: r.lmBox || null }; },
+  scene() { return { dust: r.dustI, shadow: !!r.shadowSeen, marks: r.footQuality || null, lm: r.lmBox || null, labels: r.labels || [] }; },
   hold(o) { Object.assign(input, o); }, // set the controls directly: { pad, throttle, rotate }
 };
