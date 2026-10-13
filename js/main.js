@@ -245,7 +245,8 @@ function tick(c, dt) {
   if (c.demo) {
     if (f.phase !== 'flying') {
       c.endT += dt;
-      if (c.endT > 4.5) nextDemo();
+      // A briefing keeps showing its own site; the title goes on to the next.
+      if (c.endT > 4.5) nextDemo(screen === 'brief' ? briefSite : undefined);
     }
     return;
   }
@@ -367,8 +368,8 @@ function draw(c, dt) {
   const cam = renderFrame(r, { key: c.key, site: c.site, g: c.g, f: c.f, view, dt, marks: !c.demo });
   if (c.demo || $('hud').hidden) return;
   const f = c.f;
-  const alt = Math.max(0, altitude(f));
   const fly = f.phase === 'flying';
+  const alt = fly ? Math.max(0, altitude(f)) : 0; // down is down, whatever the ground under the middle does
   if (f.phase === 'abort') return; // the numbers stay as they were when it staged
   setNum('roAlt', alt >= 10 ? String(Math.round(alt)) : alt.toFixed(1));
   const vy = fly ? f.vy : 0, vx = fly ? f.vx : 0;
@@ -470,12 +471,16 @@ function flag(id, cls) { const el = $(id); el.classList.toggle('warn', cls === '
 // ---------- the attract flight ----------
 
 function nextDemo(site) {
-  const pick = site || MISSIONS[demoIndex++ % MISSIONS.length];
+  // Behind the title: the Free flight ground when that's picked, otherwise each landing in turn.
+  const title = !site;
+  const pick = site || (mode === 'free' && free ? free.site : MISSIONS[demoIndex++ % MISSIONS.length]);
   demo = newFlight(pick, 'p66', { autopilot: true, demo: true });
   // Behind the title, join the flight a little way down, where the LM is bigger and there's more to
   // see. A briefing shows its site from low gate.
-  if (!site) for (let t = 0; t < 14; t += STEP) step(demo.f, autopilotInput(demo.ap, demo.f), STEP);
+  if (title) for (let t = 0; t < 14; t += STEP) step(demo.f, autopilotInput(demo.ap, demo.f), STEP);
 }
+// Is the flight behind the title the right one for the mode picked?
+const demoFits = () => demo && !demo.site.training && (mode === 'free' ? demo.site === (free && free.site) : !demo.site.free);
 
 // ---------- title ----------
 
@@ -513,6 +518,7 @@ for (const b of $('modes').children) {
     store.settings.mode = mode;
     save(store);
     renderTitle();
+    if (!demoFits()) nextDemo();
   });
 }
 
@@ -536,12 +542,12 @@ function rollFree(seed) {
 }
 
 $('freeGo').addEventListener('click', () => startFlight(free.site, 'p66'));
-$('freeNew').addEventListener('click', () => { rollFree(1 + Math.floor(Math.random() * 99999)); renderFree(); nextDemo(free.site); });
+$('freeNew').addEventListener('click', () => { rollFree(1 + Math.floor(Math.random() * 99999)); renderFree(); nextDemo(); });
 
 function showTitle() {
   show('title');
   renderTitle();
-  if (!demo || demo.site.free || demo.site.training) nextDemo();
+  if (!demoFits()) nextDemo();
 }
 
 // ---------- briefing ----------
@@ -622,6 +628,11 @@ function showResult() {
   $('nextBtn').hidden = !s.free && !next;
   $('nextBtn').textContent = s.free ? 'New ground' : next ? `Next: ${next.name}` : '';
   $('againBtn').textContent = j.ok ? 'Fly it again' : 'Try again';
+  // After a gold the big button moves you on; otherwise it's another go.
+  const onward = j.ok && j.tier === 'gold' && !$('nextBtn').hidden;
+  $('nextBtn').className = onward ? 'go' : 'ghost';
+  $('againBtn').className = onward ? 'ghost' : 'go';
+  $('againBtn').parentElement.prepend(onward ? $('nextBtn') : $('againBtn'));
   // The landing as the transcript would have it.
   $('loopList').replaceChildren(...c.log.map(l => {
     const li = document.createElement('li');

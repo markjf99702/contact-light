@@ -131,6 +131,9 @@ try {
   assert.equal((await state()).screen, 'ending', 'the card waits');
   await until(() => window.contactLight.state().screen === 'result');
   assert.equal(await page.locator('#moment').isVisible(), false, 'and goes when the card comes');
+  assert.equal(await page.textContent('#roAlt'), '0.0', 'down is 0 feet up');
+  assert.equal(await page.getAttribute('#nextBtn', 'class'), 'go', 'after a gold, the big button moves you on');
+  assert.equal(await page.evaluate(() => document.querySelector('#result .actions').firstElementChild.id), 'nextBtn');
   const r11 = await state();
   assert.equal(r11.judged.outcome, 'landed');
   assert.equal(r11.judged.tier, 'gold', 'the autopilot earns gold at Tranquility Base');
@@ -165,6 +168,7 @@ try {
   assert.match(await page.textContent('#rReason'), /The legs were built for 10/);
   assert.equal(await page.locator('#plaque').isVisible(), false, 'no plaque for a crash');
   assert.equal(await page.textContent('#againBtn'), 'Try again');
+  assert.equal(await page.getAttribute('#againBtn', 'class'), 'go', 'after a crash, the big button is another go');
 
   // ---------- a newcomer who touches nothing ----------
   // Tranquility Base at 14 ft/s down and 58 forward all the way: the radio says slow down, FWD goes
@@ -264,6 +268,7 @@ try {
   // ---------- Free flight ----------
   await page.tap('[data-mode=free]');
   await page.locator('#freePanel').waitFor();
+  await until(() => window.contactLight.demo().site === 'free'); // its own ground flies behind the title
   assert.match(await page.textContent('#freeName'), /^Ground \d+$/);
   await page.tap('#freeNew');
   await page.tap('#freeGo');
