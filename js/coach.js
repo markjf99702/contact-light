@@ -7,19 +7,22 @@ import { mass, ENGINE } from './sim.js';
 
 const DEG = Math.PI / 180;
 
-// Over the pad, stopped and upright, near enough to come straight down onto it.
-const overPad = (f, s) => Math.abs(f.x - s.target.x) < 20 && Math.abs(f.vx) < 0.4 && Math.abs(f.th) < 4 * DEG;
+// Over the pad, stopped and upright, near enough to come straight down onto it. Stopped is under a
+// third of a foot a second: coming down from the height you held, that drifts about 15 feet.
+const STILL = 0.35;
+const overPad = (f, s) => Math.abs(f.x - s.target.x) < 20 && Math.abs(f.vx) < STILL && Math.abs(f.th) < 4 * DEG;
 
 // What to do about drifting while you should be stopped: still moving along the ground, heading back
 // to the pad after flying past it, or stopped short of it or past it. 'stop' is the step that stops
 // you over the pad; 'still' is any step after it.
 const WORDS = {
   p66: {
-    fwd: 'Still drifting forward. Nudge the controller left, toward BACK, until FWD reads 0.',
-    back: 'Drifting back. Nudge the controller right, toward FWD, until BACK reads 0.',
+    fwd: 'Still drifting forward. Nudge the controller a touch left, toward BACK, until FWD reads 0, then let go.',
+    back: 'Drifting back. Nudge the controller a touch right, toward FWD, until BACK reads 0, then let go.',
     backTo: 'Drifting back toward the pad. As it comes under you, drag right, toward FWD, until BACK reads 0.',
-    short: 'Stopped short of the pad. Nudge the controller right to drift onto it, then stop again.',
-    past: 'Past the pad. Nudge the controller left to drift back onto it, then stop again.',
+    short: 'Stopped short of the pad. Nudge the controller a touch right to drift onto it, then stop again.',
+    past: 'Past the pad. Nudge the controller a touch left to drift back onto it, then stop again.',
+    level: 'Stopped. Let go of the controller and it stands up straight.',
   },
   arcade: {
     fwd: 'Still drifting forward. Lean back a touch until FWD reads 0, then stand it up.',
@@ -27,15 +30,18 @@ const WORDS = {
     backTo: 'Drifting back toward the pad. As it comes under you, lean forward until BACK reads 0, then stand it up.',
     short: 'Stopped short of the pad. Lean forward a touch to drift onto it, then stop again.',
     past: 'Past the pad. Lean back a touch to drift back onto it, then stop again.',
+    level: 'Stopped. Now stand it up: drag the other way until the controller reads UPRIGHT.',
   },
 };
 function drift(kind, mode, f, s) {
   const w = WORDS[mode] || WORDS.p66, dx = s.target.x - f.x, v = f.vx;
   const say = text => ({ at: 'aca', text });
-  if (kind === 'still') return Math.abs(v) > 0.6 ? say(v > 0 ? w.fwd : w.back) : null;
+  // Stopped but still leaning: let it stand up, or it sets off again.
+  const leaning = Math.abs(f.th) > 4 * DEG;
+  if (kind === 'still') return Math.abs(v) >= STILL ? say(v > 0 ? w.fwd : w.back) : leaning ? say(w.level) : null;
   const away = Math.abs(dx) >= 20;
   if (away && Math.abs(v) < 1) return say(dx > 0 ? w.short : w.past);
-  if (Math.abs(v) <= 0.4) return null;
+  if (Math.abs(v) < STILL) return leaning && !away ? say(w.level) : null;
   // Drifting over the pad, or heading away from it: stop. Heading back to it: the way back.
   if ((!away && Math.abs(v) < 2.5) || v * dx < 0) return say(v > 0 ? w.fwd : w.back);
   return v < 0 ? say(w.backTo) : null;

@@ -542,9 +542,9 @@ test('low down, a training hint says what is going wrong, in the mode\'s own con
   assert.ok(STEPS.some(st => st.text === high), high);
   // Stopped short of the pad, or drifting over it, it says which way to go.
   const stop = STEPS.findIndex(st => st.nudge === 'stop');
-  assert.match(hint('p66', { x: pad - 60, alt: 140, vx: 0, vy: 0 }, stop).text, /^Stopped short of the pad\. Nudge the controller right/);
+  assert.match(hint('p66', { x: pad - 60, alt: 140, vx: 0, vy: 0 }, stop).text, /^Stopped short of the pad\. Nudge the controller a touch right/);
   assert.match(hint('arcade', { x: pad + 60, alt: 140, vx: 0, vy: 0 }, ARCADE_STEPS.findIndex(st => st.nudge === 'stop')).text, /^Past the pad\. Lean back a touch/);
-  assert.match(hint('p66', { x: pad + 5, alt: 140, vx: -1.2, vy: 0 }, stop).text, /^Drifting back\. Nudge the controller right, toward FWD/);
+  assert.match(hint('p66', { x: pad + 5, alt: 140, vx: -1.2, vy: 0 }, stop).text, /^Drifting back\. Nudge the controller a touch right, toward FWD/);
   // None of Arcade's hints ask for the rate switch it doesn't have.
   for (const [start, k] of [[{ alt: 30, vx: 5, vy: -2 }, 0], [{ alt: 30, vx: 0, vy: -7 }, 0], [{ x: pad - 60, alt: 140, vx: 0, vy: 0 }, 4], [{ x: pad + 5, alt: 140, vx: 1.2, vy: 0 }, 4], [{ alt: 80, vx: 1, vy: -2 }, 5]]) {
     assert.doesNotMatch(hint('arcade', start, k).text, /[▲▼]/);

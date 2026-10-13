@@ -37,10 +37,10 @@ export function literalPilot(mode, site) {
         pad = me.phase === 'brake' && back ? 1 : 0;
       } else if (/drag left, toward BACK, until FWD reads 0/.test(text)) pad = read && fwd ? -1 : 0;
       else if (/drag right, toward FWD, until BACK reads 0/.test(text)) pad = read && back ? 1 : 0;
-      else if (/Nudge the controller left, toward BACK, until FWD reads 0/.test(text)) pad = read && f.vx > 0.15 ? -0.4 : 0;
-      else if (/Nudge the controller right, toward FWD, until BACK reads 0/.test(text)) pad = read && f.vx < -0.15 ? 0.4 : 0;
-      else if (/Nudge the controller right to drift onto it/.test(text)) pad = read && f.vx < 1.2 ? 0.4 : 0;
-      else if (/Nudge the controller left to drift back onto it/.test(text)) pad = read && f.vx > -1.2 ? -0.4 : 0;
+      else if (/Nudge the controller a touch left, toward BACK, until FWD reads 0/.test(text)) pad = read && f.vx > 0.15 ? -0.25 : 0;
+      else if (/Nudge the controller a touch right, toward FWD, until BACK reads 0/.test(text)) pad = read && f.vx < -0.15 ? 0.25 : 0;
+      else if (/Nudge the controller a touch right to drift onto it/.test(text)) pad = read && f.vx < 1.2 ? 0.25 : 0;
+      else if (/Nudge the controller a touch left to drift back onto it/.test(text)) pad = read && f.vx > -1.2 ? -0.25 : 0;
       return { pad, rod };
     }
 
@@ -53,7 +53,7 @@ export function literalPilot(mode, site) {
     } else if (/lean a little toward the pad/.test(text)) {
       if (read) rotate = lean(f, 8);
       vyWant = 0;
-    } else if (/Drag left until the controller reads UPRIGHT/.test(text)) {
+    } else if (/Drag left until the controller reads UPRIGHT|stand it up: drag the other way until the controller reads UPRIGHT/.test(text)) {
       rotate = read ? lean(f, 0) : 0;
       vyWant = 0;
     } else if (/As the pad comes under you, drag left to lean back|As it comes under you, lean forward/.test(text)) {
