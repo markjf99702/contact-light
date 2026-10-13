@@ -279,7 +279,7 @@ details.loop li b { font-weight: 700; margin-right: .1em; }
   .ro { grid-template-columns: auto auto auto; align-items: baseline; gap: 6px; }
   .ro b { font-size: 19px; }
   .strip { height: 18px; margin-top: 4px; }
-  .radio { min-height: 0; font-size: 11.5px; margin-top: 4px; }
+  .radio { min-height: 0; font-size: 11.5px; margin-top: 4px; padding-right: 100px; } /* clear of the clock */
   .radio p.old, .radio p.older { display: none; }
   .panel {
     background: none; border: 0; pointer-events: none; align-items: end; gap: 12px;

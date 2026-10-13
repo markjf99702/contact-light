@@ -637,5 +637,6 @@ window.contactLight = {
   fly(id, m = 'p66') { startFlight(siteById(id), m); },
   demo() { return demo && { site: demo.site.id, phase: demo.f.phase }; },
   drawing() { return r.key; },
+  scene() { return { dust: r.dustI, shadow: !!r.shadowSeen }; }, // what the picture shows: how thick the dust is, whether the LM's shadow is on screen
   hold(o) { Object.assign(input, o); }, // set the controls directly: { pad, throttle, rotate }
 };

@@ -1,7 +1,7 @@
 // Flies Contact Light in Chromium through the real page:  node test/e2e.mjs  (needs Playwright)
 // Learns the controls at Ellington with real taps and drags, lands at Tranquility Base, crashes,
-// aborts, tries Arcade and Free flight, checks the plaques are kept, plays once more offline, and
-// has the calls read aloud.
+// aborts, tries Arcade and Free flight, checks the plaques are kept, plays once more offline, comes
+// down through Surveyor crater's dust with the phone on its side, and has the calls read aloud.
 // It ends with the checks every junkdrawer.works project wants.
 import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
@@ -251,6 +251,33 @@ try {
   await dp.keyboard.up('ArrowLeft');
   await dp.waitForFunction(() => Math.abs(window.contactLight.state().th) < 1);
   await desk.close();
+
+  // ---------- the dust at Surveyor crater, and a phone on its side ----------
+  // Apollo 12 came down in thick dust; the moment the engine stops, it's gone, and the LM's
+  // shadow lies beside it. Held sideways, Houston's clock sits at the right, clear of the radio.
+  const side = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const sp = await side.newPage();
+  watch(sp);
+  await sp.goto(base);
+  await sp.waitForFunction(() => window.contactLight && window.contactLight.demo());
+  await sp.evaluate(() => { window.contactLight.fly('a12'); window.contactLight.autopilot(true); window.contactLight.speed(4); });
+  await sp.waitForFunction(() => window.contactLight.state().alt < 12, null, LONG);
+  await sp.evaluate(() => window.contactLight.speed(1));
+  await sp.waitForFunction(() => window.contactLight.scene().dust > 0.5, null, LONG);
+  await sp.waitForFunction(() => window.contactLight.state().phase !== 'flying', null, LONG);
+  await sp.waitForFunction(() => window.contactLight.scene().dust === 0, null, { timeout: 5000 });
+  assert.equal((await sp.evaluate(() => window.contactLight.scene())).shadow, true, 'the shadow is on screen beside the LM');
+  assert.equal(await sp.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'no sideways scroll on its side');
+  await sp.evaluate(() => { window.contactLight.fly('a14'); window.contactLight.setFuel(5.7); window.contactLight.speed(2); });
+  await sp.waitForFunction(() => window.contactLight.state().low, null, LONG);
+  await sp.evaluate(() => window.contactLight.speed(0));
+  const clock = await sp.locator('#clock').boundingBox();
+  assert.ok(clock && clock.x > 844 / 2, `the clock is on the right (${clock && clock.x})`);
+  for (const p of await sp.locator('#radio p').all()) {
+    const b = await p.boundingBox();
+    if (b) assert.ok(b.x + b.width < clock.x || b.y > clock.y + clock.height || b.y + b.height < clock.y, 'the clock is clear of the radio');
+  }
+  await side.close();
 
   // ---------- reading the calls aloud ----------
   // The browser's voice is swapped for a recorder. An iPhone only lets a page speak once it has
