@@ -149,6 +149,11 @@ function speak(l) {
   } catch { /* no voice: the words are on screen anyway */ }
 }
 
+// A short buzz on phones that can (Android does, iPhones don't), when the sound is on.
+export function buzz(pattern) {
+  try { if (soundOn && navigator.vibrate) navigator.vibrate(pattern); } catch { /* not allowed: fine */ }
+}
+
 export function stopSpeech() {
   try { if (canSpeak()) speechSynthesis.cancel(); } catch { /* fine */ }
 }

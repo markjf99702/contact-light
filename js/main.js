@@ -263,6 +263,7 @@ function onEvent(c, e) {
     case 'contact':
       $('lampContact').classList.add('on');
       sound.play('contact');
+      sound.buzz(18);
       break;
     case 'lowLevel':
       $('lampLow').classList.add('on');
@@ -278,9 +279,9 @@ function onEvent(c, e) {
       c.endT = 0;
       if (e.type === 'touchdown') {
         finish(f, j.outcome);
-        if (j.outcome === 'crash') { burst(r, f); sound.play('crash'); }
-        else if (e.record.down > 5) { bump(r, 6); sound.play('hard'); }
-        else { bump(r, 2); sound.play('thud'); }
+        if (j.outcome === 'crash') { burst(r, f); sound.play('crash'); sound.buzz([90, 40, 140]); }
+        else if (e.record.down > 5) { bump(r, 6); sound.play('hard'); sound.buzz(70); }
+        else { bump(r, 2); sound.play('thud'); sound.buzz(35); }
       } else sound.play('abort');
       sound.engine(0);
       $('lampContact').classList.toggle('on', j.outcome === 'landed' || $('lampContact').classList.contains('on'));

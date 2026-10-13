@@ -4,8 +4,8 @@
 // plus about as much again as the real sites leave a good pilot.
 
 import { rng, between } from './rng.js';
-import { buildGround } from './terrain.js';
-import { createFlight, step, pct } from './sim.js';
+import { buildGround, spotAt } from './terrain.js';
+import { createFlight, step, pct, VEHICLES } from './sim.js';
 import { judge } from './judge.js';
 import { createAutopilot, autopilotInput } from './autopilot.js';
 
@@ -21,6 +21,9 @@ export function makeFreeSite(seed) {
   for (let tries = 0; tries < 12; tries++) {
     const site = roll((seed + tries * 7919) >>> 0);
     const g = buildGround({ ...site.ground, sun: site.sun });
+    // The planned spot has to be no good, or there's nothing to fly for.
+    const q = spotAt(g, site.target.x, VEHICLES.lm);
+    if (Math.abs(q.rest) <= 3 && q.rock < 0.5 && !q.bellHit && !q.bodyHit) continue;
     const used = fly(site, g, 40);
     if (!used || !used.ok) continue;
     // Fuel: what it took the autopilot plus a margin like the real sites', so a careful landing
@@ -41,11 +44,22 @@ function roll(seed) {
   const trouble = TROUBLE[Math.floor(R() * TROUBLE.length)];
   const tx = Math.round(between(R, 780, 1250));
   const craters = [], fields = [], ramps = [], mounds = [];
-  // Something wrong at the target.
-  if (trouble === 'crater') craters.push({ x: tx + between(R, -40, 40), r: between(R, 140, 260), d: between(R, 30, 70), rim: between(R, 4, 9), fresh: R() < 0.5 });
-  if (trouble === 'craters') for (let k = 0; k < 4; k++) craters.push({ x: tx + between(R, -160, 160), r: between(R, 25, 60), d: between(R, 7, 15), rim: between(R, 1.5, 3), fresh: true });
-  if (trouble === 'boulders') fields.push({ x0: tx - between(R, 160, 260), x1: tx + between(R, 160, 260), n: Math.round(between(R, 90, 160)), min: 1.2, max: between(R, 7, 12), peak: tx });
-  if (trouble === 'slope') mounds.push({ x: tx + between(R, -60, 60), w: between(R, 120, 200), dh: between(R, 22, 40) * (R() < 0.5 ? 1 : -1) });
+  // Something wrong at the target: it sits on a crater's inner wall, in a nest of fresh craters, among
+  // boulders, or on the steep flank of a rise.
+  const side = R() < 0.5 ? -1 : 1;
+  if (trouble === 'crater') {
+    const r = between(R, 140, 260);
+    craters.push({ x: tx + side * r * between(R, 0.45, 0.7), r, d: between(R, 35, 70), rim: between(R, 4, 9), fresh: R() < 0.5 });
+  }
+  if (trouble === 'craters') {
+    craters.push({ x: tx, r: between(R, 30, 50), d: between(R, 8, 13), rim: between(R, 1.5, 3), fresh: true });
+    for (let k = 0; k < 3; k++) craters.push({ x: tx + between(R, -170, 170), r: between(R, 25, 60), d: between(R, 7, 15), rim: between(R, 1.5, 3), fresh: true });
+  }
+  if (trouble === 'boulders') fields.push({ x0: tx - between(R, 160, 260), x1: tx + between(R, 160, 260), n: Math.round(between(R, 110, 170)), min: 1.2, max: between(R, 7, 12), peak: tx });
+  if (trouble === 'slope') {
+    const w = between(R, 110, 180);
+    mounds.push({ x: tx + side * w * 0.5, w, dh: between(R, 26, 42) });
+  }
   // Some more country.
   for (let k = 0; k < 2 + Math.floor(R() * 3); k++) {
     const x = between(R, -400, 2900);

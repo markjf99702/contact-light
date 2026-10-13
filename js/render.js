@@ -169,7 +169,7 @@ function buildBackdrop(site) {
   }
   const big = site.backdrop;
   if (big === 'apennines') {
-    layers.push({ massif: true, p: 0.05, col: [44, 42, 40], lit: [150, 143, 132], pts: massif([[-1400, 0], [-1100, 60], [-760, 190], [-430, 240], [-160, 205], [80, 120], [260, 60], [420, 28], [700, 70], [980, 150], [1200, 165], [1500, 70], [1800, 0]]) });
+    layers.push({ massif: true, p: 0.05, col: [44, 42, 40], lit: [150, 143, 132], pts: massif([[-1800, 0], [-1500, 70], [-1200, 165], [-980, 150], [-700, 70], [-420, 28], [-260, 60], [-80, 120], [160, 205], [430, 240], [760, 190], [1100, 60], [1400, 0]]) });
   } else if (big === 'massifs') {
     layers.push({ massif: true, p: 0.05, col: [42, 40, 38], lit: [146, 139, 128], pts: massif([[-1500, 0], [-1200, 90], [-900, 150], [-620, 140], [-420, 210], [-150, 250], [120, 235], [380, 170], [560, 115], [760, 160], [1000, 200], [1300, 120], [1600, 0]]) });
   } else if (big === 'highlands') {
@@ -199,9 +199,11 @@ function backdrop(r, sc) {
   const site = sc.site;
   // The far layers zoom far less than the ground does.
   const bs = 0.62 * Math.pow(cam.s / 0.6, 0.2);
+  // The far layers stand on the ground near you, and fade out below that, so wherever the near
+  // ground dips lower they never show as a wall.
   let datum = 0;
-  for (let k = -4; k <= 4; k++) datum += groundAt(sc.g, cam.cx + k * 100);
-  const base = r.Y(datum / 9) + 2;
+  for (let k = -2; k <= 2; k++) datum += groundAt(sc.g, cam.cx + k * 60);
+  const base = r.Y(datum / 5) + 2;
   for (const L of r.bg) {
     if (L.earth) { earthBackdrop(r, base, bs); continue; }
     const X = x => r.ox + (x - cam.cx * L.p) * bs;
@@ -212,10 +214,12 @@ function backdrop(r, sc) {
     ctx.lineTo(X(L.pts[L.pts.length - 1][0]), base + 400);
     ctx.closePath();
     const top = Math.max(...L.pts.map(p => p[1]));
-    const gr = ctx.createLinearGradient(0, base - top * bs, 0, base);
+    const gr = ctx.createLinearGradient(0, base - top * bs, 0, base + 40);
+    const f = Math.min(0.98, (top * bs) / (top * bs + 40));
     gr.addColorStop(0, rgb(L.lit, 0.82));
-    gr.addColorStop(0.5, rgb(L.col, 1.1));
-    gr.addColorStop(1, rgb(L.col, 0.75));
+    gr.addColorStop(f * 0.5, rgb(L.col, 1.1));
+    gr.addColorStop(f, rgb(L.col, 0.75));
+    gr.addColorStop(1, rgb(L.col, 0.75, 0));
     ctx.fillStyle = gr;
     ctx.fill();
     // Faces turned toward the low Sun on the left catch the light.
@@ -260,9 +264,11 @@ function massifLayer(ctx, L, X, base, bs) {
     ctx.fill(paths[lv]);
   }
   const top = Math.max(...L.pts.map(p => p[1]));
-  const fade = ctx.createLinearGradient(0, base - top * bs, 0, base);
-  fade.addColorStop(0, 'rgba(0,0,0,0)');
-  fade.addColorStop(1, 'rgba(0,0,0,.45)');
+  const fade = ctx.createLinearGradient(0, base - top * bs, 0, base + 40);
+  const f = Math.min(0.98, (top * bs) / (top * bs + 40));
+  fade.addColorStop(0, 'rgba(3,3,4,0)');
+  fade.addColorStop(f, 'rgba(3,3,4,.45)');
+  fade.addColorStop(1, 'rgba(3,3,4,1)');
   ctx.fillStyle = fade;
   ctx.fill(outline);
 }
@@ -891,10 +897,12 @@ export function burst(r, f, n = 40) {
     const a = 0.25 + Math.random() * (Math.PI - 0.5), sp = 4 + Math.random() * 14;
     r.debris.push({ x: f.x + (Math.random() - 0.5) * 12, y: f.y - f.veh.cg + 3, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, c: cols[k % cols.length] });
   }
-  r.shake = 10;
+  if (!still()) r.shake = 10;
 }
 
-export function bump(r, k = 3) { r.shake = Math.max(r.shake, k); }
+export function bump(r, k = 3) { if (!still()) r.shake = Math.max(r.shake, k); }
+// People who've asked their phone for less motion get no camera shake.
+const still = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ---------- the lander ----------
 

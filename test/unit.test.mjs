@@ -302,6 +302,8 @@ test('Free flight rolls new ground that can be landed, the same ground for the s
   for (const seed of [1, 2, 3, 77, 1234, 98765]) {
     const made = makeFreeSite(seed);
     assert.ok(made, `seed ${seed}`);
+    const q = spotAt(made.ground, made.site.target.x, VEHICLES.lm);
+    assert.ok(Math.abs(q.rest) > 3 || q.rock >= 0.5 || q.bellHit || q.bodyHit, `seed ${seed}: something is wrong at the target`);
     const { r, j } = autoland(made.site, 'p66');
     assert.ok(r && j.ok, `seed ${seed}: ${j && j.reason}`);
   }
