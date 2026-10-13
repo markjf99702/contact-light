@@ -223,21 +223,26 @@ function line(radio, role, text, extra = {}) {
   return { role, who: who(radio, role), text, say: say(text), quindar: role === 'capcom', ...extra };
 }
 
-// The opening exchange as you take over.
-export function openingLines(site) {
+// The opening exchange as you take over. Arcade has no P66 to be in, so where the crew's own words
+// are about P66, Arcade hears Houston's go for landing instead.
+export function openingLines(site, mode = 'p66') {
   const r = createRadio(site);
   const lm = site.people.lm;
   const L = (role, text, at) => ({ ...line(r, role, text), at });
-  switch (site.id) {
-    case 'ellington': return [L('capcom', 'LLTV, Ellington. You’re clear to fly. Take your time.', 0.4)];
-    case 'a11': return [L('capcom', 'Eagle, Houston. You’re go for landing.', 0.4)];
-    case 'a12': return [L('lmp', 'You’re in P66, Pete.', 0.4), L('cdr', 'Right.', 1.8)];
-    case 'a14': return [L('cdr', 'Let’s take it over and move up a little.', 0.4), L('lmp', 'Okay. I think so.', 2.2)];
-    case 'a15': return [L('lmp', 'You’ve got P66.', 0.4), L('cdr', 'Okay.', 1.6)];
-    case 'a16': return [L('cdr', 'Okay. I’m going to take over, Charlie.', 0.4), L('lmp', 'Okay.', 2.0)];
-    case 'a17': return [L('cdr', 'Okay. I’ve got P66.', 0.4), L('lmp', 'Okay.', 1.6)];
-    default: return [L('capcom', `${lm}, Houston. You’re go for landing.`, 0.4)];
-  }
+  const go = [L('capcom', `${lm}, Houston. You’re go for landing.`, 0.4)];
+  const crew = (() => {
+    switch (site.id) {
+      case 'ellington': return [L('capcom', 'LLTV, Ellington. You’re clear to fly. Take your time.', 0.4)];
+      case 'a11': return [L('capcom', 'Eagle, Houston. You’re go for landing.', 0.4)];
+      case 'a12': return [L('lmp', 'You’re in P66, Pete.', 0.4), L('cdr', 'Right.', 1.8)];
+      case 'a14': return [L('cdr', 'Let’s take it over and move up a little.', 0.4), L('lmp', 'Okay. I think so.', 2.2)];
+      case 'a15': return [L('lmp', 'You’ve got P66.', 0.4), L('cdr', 'Okay.', 1.6)];
+      case 'a16': return [L('cdr', 'Okay. I’m going to take over, Charlie.', 0.4), L('lmp', 'Okay.', 2.0)];
+      case 'a17': return [L('cdr', 'Okay. I’ve got P66.', 0.4), L('lmp', 'Okay.', 1.6)];
+      default: return go;
+    }
+  })();
+  return mode === 'arcade' && crew.some(l => /P66/.test(l.text)) ? go : crew;
 }
 
 // Called every step with the flight and the events the step produced. Returns lines to show now.
@@ -249,7 +254,9 @@ export function radioUpdate(radio, f, events, state) {
   const ev = (kind) => {
     if (radio.said[kind]) return;
     radio.said[kind] = true;
-    const e = eventLine(kind, st, P);
+    let e = eventLine(kind, st, P);
+    // Arcade has no rate switch, so a crew's call for clicks of it becomes the plain call.
+    if (e && f.mode === 'arcade' && /\bclicks?\b/i.test(e.text)) e = eventLine(kind, 'plain', P);
     if (e) push(line(radio, e.role || 'lmp', e.text));
   };
 

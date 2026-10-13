@@ -152,7 +152,7 @@ function startFlight(site, m = mode) {
   Object.assign(input, { pad: 0, rod: 0, throttle: m === 'arcade' ? Math.round(cur.f.thr * 100) / 100 : 0, rotate: 0 });
   keyTilt = 0;
   held.keys.clear();
-  for (const l of openingLines(site)) cur.pending.push({ ...l, at: l.at });
+  for (const l of openingLines(site, m)) cur.pending.push({ ...l, at: l.at });
   // Free flight leads with the ground's number, so it shows even beside Houston's clock.
   $('hudName').textContent = site.free ? `Ground ${site.seed}` : site.name;
   $('hudPlace').textContent = site.place;

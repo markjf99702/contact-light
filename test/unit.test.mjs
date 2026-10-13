@@ -339,6 +339,23 @@ test('the radio makes its calls once, in Houston\'s and the crew\'s voices', () 
   assert.match(openingLines(site)[0].text, /Eagle, Houston\. You’re go for landing/);
 });
 
+test('Arcade\'s radio says nothing about P66 or clicking the rate switch, which Arcade doesn\'t have', () => {
+  for (const site of SITES) assert.ok(!openingLines(site, 'arcade').some(l => /P66/.test(l.text)), `${site.id}: ${openingLines(site, 'arcade').map(l => l.text)}`);
+  assert.equal(openingLines(siteById('a12'))[0].text, 'You’re in P66, Pete.', 'P66 keeps the crew\'s own words');
+  assert.equal(openingLines(siteById('a12'), 'arcade')[0].text, 'Intrepid, Houston. You’re go for landing.');
+  // Hanging high at Fra Mauro, and coming down fast at Descartes.
+  const calls = (id, mode, st) => {
+    const site = siteById(id), radio = createRadio(site), f = createFlight(site, flatGround(site), mode);
+    radio.next = 99;
+    const base = { alt: 300, rate: -0.5, fwd: 0, pct: 8.7, t: 20, dustOn: false, thickDust: false, shadowSeen: false };
+    return [20, 30].flatMap(t => radioUpdate(radio, f, [], { ...base, ...st, t })).map(l => l.text);
+  };
+  assert.deepEqual(calls('a14', 'p66', {}), ['I’d give it a few clicks.']);
+  assert.deepEqual(calls('a14', 'arcade', {}), ['You’re a little high.']);
+  assert.deepEqual(calls('a16', 'p66', { alt: 90, rate: -9 }), ['Give me a couple of clicks up.']);
+  assert.deepEqual(calls('a16', 'arcade', { alt: 90, rate: -9 }), ['Watch your rate.']);
+});
+
 // Flies a site and runs the radio the way the page does, keeping every line with the numbers at that moment.
 function radioFlight(site, pilot, mode = 'p66') {
   const g = buildGround({ ...site.ground, sun: site.sun });
