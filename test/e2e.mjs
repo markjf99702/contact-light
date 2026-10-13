@@ -245,6 +245,25 @@ try {
   await page.locator('#pause').waitFor();
   await page.tap('#quitBtn');
   await page.locator('#title').waitFor();
+  await until(() => history.state === null); // the button took its step off the history
+
+  // ---------- the phone's Back button ----------
+  // Back on a briefing comes back to the list, Back mid-flight pauses, and Back on the pause menu
+  // comes back to the list; none of them leaves the game.
+  const back = () => page.evaluate(() => history.back());
+  await page.tap('[data-site=a12]');
+  await page.locator('#brief').waitFor();
+  await back();
+  await page.locator('#title').waitFor();
+  await page.tap('[data-site=a12]');
+  await page.tap('#goBtn');
+  await until(() => window.contactLight.state().screen === 'flight' && window.contactLight.state().site === 'a12');
+  await back();
+  await page.locator('#pause').waitFor();
+  assert.equal((await state()).screen, 'paused', 'Back mid-flight pauses');
+  await back();
+  await page.locator('#title').waitFor();
+  assert.equal(page.url(), base, 'still in the game');
 
   // ---------- Arcade ----------
   await page.tap('[data-mode=arcade]');

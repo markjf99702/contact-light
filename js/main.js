@@ -187,8 +187,27 @@ function show(name) {
   $('coach').hidden = true;
   if (name !== 'ending') $('moment').hidden = true;
   if (!flying) sound.engine(0);
+  remember(name);
   layout();
 }
+
+// The phone's Back button. Leaving the site list adds a step to the history, so Back on a briefing,
+// a result or the pause menu comes back to the list, and Back mid-flight pauses, rather than leaving
+// the game. Coming back to the list by a button takes the step off again.
+let stepped = false;
+function remember(name) {
+  try {
+    if (name !== 'title' && !stepped) { history.pushState({ contactLight: true }, ''); stepped = true; }
+    else if (name === 'title' && stepped) { stepped = false; history.back(); }
+  } catch { /* a frame that can't keep history: Back just leaves */ }
+}
+addEventListener('popstate', () => {
+  if (!stepped) return; // the step a button just took off
+  stepped = false;
+  if (screen === 'flight') pause();
+  else if (screen === 'ending') showResult();
+  else if (screen !== 'title') { cur = null; showTitle(); }
+});
 
 // The part of the screen the camera frames: between the numbers and the panel in flight, the open
 // sky above the title card on a phone.
