@@ -343,6 +343,9 @@ function say(c, l) {
   const p = document.createElement('p');
   if (l.role === 'capcom') p.classList.add('capcom');
   if (l.big) p.classList.add('big');
+  // The landing's own line is shown large over the scene, so the radio keeps its copy for screen
+  // readers only rather than printing it twice.
+  if (l.moment && screen === 'ending' && !c.demo) p.classList.add('aside');
   const b = document.createElement('b');
   b.textContent = String(l.who || '').toUpperCase();
   p.append(b, ...monoNodes(l.text.replace(/[’‘]/g, "'")));

@@ -81,6 +81,7 @@ button { font: inherit; color: inherit; }
 /* A comma, colon, point or apostrophe takes a whole cell in B612 Mono, with its ink at the left. */
 .radio .pn, .clock .pn, .moment .pn { margin: 0 -.32em 0 -.04em; }
 .radio p.big b { color: var(--blue); }
+.radio p.aside { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* ---------- the panel along the bottom ---------- */
 .panel {

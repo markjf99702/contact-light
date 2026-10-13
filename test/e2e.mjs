@@ -143,6 +143,7 @@ try {
   assert.equal(await page.textContent('#momentLine'), 'The Eagle has landed.');
   assert.equal(await page.textContent('#momentLead'), 'Houston, Tranquility Base here.');
   assert.match(await page.textContent('#momentWho'), /^ARMSTRONG · 102:4\d:\d\d$/);
+  assert.equal(await page.evaluate(() => [...document.querySelectorAll('#radio p')].filter(p => p.offsetHeight > 2 && /Eagle has landed/.test(p.textContent)).length), 0, 'said once, large, and not in the radio as well');
   const mb = await page.locator('#moment').boundingBox(), hb = await page.locator('#hud').boundingBox();
   assert.ok(mb.y >= hb.y + hb.height && mb.y + mb.height <= (await page.locator('#panel').boundingBox()).y, 'between the numbers and the panel');
   assert.equal((await state()).screen, 'ending', 'the card waits');
