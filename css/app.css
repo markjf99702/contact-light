@@ -86,7 +86,7 @@ button { font: inherit; color: inherit; }
   background: linear-gradient(rgba(21, 23, 26, .9), rgba(16, 18, 20, .98));
   border-top: 1px solid rgba(255, 255, 255, .08);
   display: grid; grid-template-columns: 82px 66px 1fr; gap: 10px; align-items: center;
-  user-select: none; -webkit-user-select: none; touch-action: none;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none;
 }
 .panel .lbl { font: 600 9.5px/1 var(--disp); letter-spacing: .16em; color: var(--ink3); }
 .rod { display: grid; gap: 6px; justify-items: stretch; }
