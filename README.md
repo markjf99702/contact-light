@@ -2,7 +2,7 @@
 
 **Play it: [contact-light.junkdrawer.works](https://contact-light.junkdrawer.works/)**
 
-**Land on the Moon the way the Apollo commanders did: a foot per second at a time.** Each landing starts at low gate, about 500 feet up and still moving forward, and something is wrong with the spot the computer picked: the boulders round West crater, the middle of Surveyor crater, a slope at Hadley. You take over in P66, the program every crew landed in. The computer holds whatever descent rate you click, you tilt the LM to slow down or fly on, and the LM pilot calls your numbers the way Aldrin did ("40 feet, down 2 1/2. Picking up some dust.") while Houston counts down the fuel. Then the probes touch, the blue lunar contact lamp comes on, and you hear the real words from that landing, with the big one ("The Eagle has landed.") written large across the sky above you.
+**Land on the Moon the way the Apollo commanders did: a foot per second at a time.** Each landing starts at low gate, about 500 feet up and still moving forward, with something wrong at the spot the computer picked: the boulders round West crater, the middle of Surveyor crater, a slope at Hadley. You take over in P66, the program every crew landed in: the computer holds whatever descent rate you click, you tilt the LM to slow down or fly on, and the LM pilot calls your numbers the way Aldrin did ("40 feet, down 2 1/2. Picking up some dust.") while Houston counts down the fuel. Then the probes touch, the blue lunar contact lamp comes on, and you hear the real words from that landing, with the big one ("The Eagle has landed.") written large across the sky above you.
 
 <p align="center">
   <img src="docs/phone-flight.png" alt="Apollo 11, 30 feet up and coming down at 2.9 ft/s over smooth ground past West crater: the dust blows out from under the engine, green marks show the footpads would land on 0.9° of slope, the low-level light is on and Aldrin says 6 percent, quantity light" width="250">
@@ -15,10 +15,10 @@
 ## How it plays
 
 - **The rate switch** (▲ ▼, or the ↑ ↓ keys): each click changes the descent rate the computer holds by a foot per second. It starts wherever you were coming down when you took over, so the first thing to do is usually click it up a few times.
-- **The hand controller** (drag it, or hold ← →): left, toward BACK at that end of it, tilts the LM back and slows you down; right, toward FWD, speeds you up. Let go and the LM stands upright again and coasts. Two thumbs: one on the rate switch, one on the controller.
+- **The hand controller** (drag it, or hold ← →): left, toward BACK, tilts the LM back and slows you down; right, toward FWD, speeds you up. Let go and the LM stands upright again and coasts. Two thumbs: one on the rate switch, one on the controller.
 - **The numbers** across the top are altitude, how fast you're coming down, speed along the ground and fuel. The strip under them is the whole site in profile, with you, the target and what the screen is showing. Below 100 feet, marks on the ground show where the footpads will come down, and the angle there: green is good, amber is rough, red is no. Moving too fast along the ground to stop before the footpads touch, FWD turns red and the marks say how fast instead.
 - **The dust.** Below about 100 feet the engine blasts the surface out sideways, grains racing off in every direction, and near the ground it hides the surface the way it did for the crews (Apollo 12 and 15 landed "on the gauges"). When the engine stops it's gone at once: nothing hangs in a vacuum. The LM's shadow, out ahead of you all the way down because the Sun is low behind you, slides back to meet the footpads.
-- **Fuel.** The low-level light comes on at 5.6%. Houston starts the clock: 94 seconds to Bingo, with calls at 60 and 30 seconds, and at Bingo you have 20 seconds to land or abort. Run dry or run out the clock up high and it's abort stage: the ascent stage leaves without you.
+- **Fuel.** The low-level light comes on at 5.6%. Houston starts the clock: 94 seconds to Bingo, with calls at 60 and 30 seconds, and at Bingo you have 20 seconds to land or abort. Run dry or run out the clock up high and it's abort stage: the ascent stage fires for orbit and leaves the descent stage behind.
 - **The radio.** The LM pilot calls your height, rate and speed along the ground, and says so when something's wrong: coming down too fast, moving too fast along the ground to stop before the footpads touch, or flying on past the target. "Looking good" means it is.
 - **Contact light** means one of the 67-inch probes under the footpads has touched. Hold steady: the engine stops when the footpads touch.
 - **Plaques.** Every touchdown number gets gold, silver or bronze: how fast you came down and along the ground, how upright you were, the slope you came to rest on, rocks under the footpads, distance from the target, and whether you were down before Houston's 30-second call. The plaque is the worst of them, so the table says exactly what to fly better. Past the LM's limits (10 ft/s down, less when you're moving along the ground; 4 ft/s along it; a 12° slope) it crashes or tips over, and the card names everything that went wrong. Each number is judged as the card shows it, to a tenth.
@@ -55,8 +55,10 @@ It's a static site: plain HTML, CSS and JavaScript, with no build step.
 ```sh
 npx serve .                   # or any static file server, then open the printed address
 npm test                      # unit tests, then flies it in Chromium through the real page (needs Playwright)
-node tools/screenshots.mjs    # redraws docs/*.png and og.png, the link preview
 node tools/make-icons.mjs     # redraws the PNG icons from icon.svg
+npm install                   # only for the two below: upng-js and esbuild
+node tools/screenshots.mjs    # redraws docs/*.png and og.png, the link preview
+npm run build                 # dist/contact-light.html, the whole game in one file
 ```
 
 To put it online with GitHub Pages: **Settings → Pages → Build and deployment → Deploy from a branch**, then pick `main` and `/ (root)`. The `CNAME` file puts it at contact-light.junkdrawer.works.
@@ -77,3 +79,4 @@ To put it online with GitHub Pages: **Settings → Pages → Build and deploymen
 - `fonts/`: Jost and B612 Mono (SIL Open Font License), served from here so nothing loads from elsewhere. B612 was drawn for aircraft cockpit displays.
 - `sw.js`: keeps a copy of the game for flying offline.
 - `tools/screenshots.mjs` draws the README's pictures in `docs/` and the link preview, `og.png`, from the game itself; `tools/make-icons.mjs` draws the icons.
+- `scripts/build.mjs` bundles the game, fonts and all, into `dist/contact-light.html`, which opens from anywhere, and writes `dist/artifact.html`, the same page without its `<html>`, `<head>` and `<body>`, for a playable copy shown inside another page. `dist/` isn't kept in the repo.
