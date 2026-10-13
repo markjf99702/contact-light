@@ -386,15 +386,19 @@ function showMoment(c, l, t) {
   const top = $('hud').getBoundingClientRect().bottom + 8;
   const bottom = r.lmBox ? Math.min(r.lmBox[1], $('panel').getBoundingClientRect().top) - 12 : innerHeight * 0.6;
   // A little below the middle of the sky, or wherever it keeps clear of the Earth: higher or lower,
-  // or, where the sky is shallow (a laptop), off to the side away from it.
+  // just under it or just over it. It may reach down past the top of the LM's antennas, never further.
   const h = box.offsetHeight, w = box.offsetWidth, e = r.earthBox;
   const clear = (x, y) => !e || e[3] < y - h / 2 - 6 || e[1] > y + h / 2 + 6 || e[2] < x - w / 2 - 12 || e[0] > x + w / 2 + 12;
+  const fits = y => y - h / 2 >= top - 2 && y + h / 2 <= bottom + 24;
   const ys = [0.6, 0.72, 0.48, 0.84].map(k => Math.max(top + h / 2, top + (bottom - top) * k));
-  let x = innerWidth / 2, y = ys.find(q => clear(x, q));
+  if (e) ys.push(e[3] + 8 + h / 2, e[1] - 8 - h / 2);
+  let x = innerWidth / 2, y = ys.find(q => fits(q) && clear(x, q));
   if (y == null) {
-    y = ys[0];
+    // Where the sky is too shallow (a laptop): off to the side away from the Earth, if the line is
+    // narrow enough to get clear of it there; otherwise in the middle, as low as it may go.
     const away = e[0] + e[2] > innerWidth ? e[0] - 28 - w / 2 : e[2] + 28 + w / 2;
-    x = Math.max(w / 2 + 8, Math.min(innerWidth - w / 2 - 8, away));
+    const ax = Math.max(w / 2 + 8, Math.min(innerWidth - w / 2 - 8, away));
+    if (clear(ax, ys[0])) { x = ax; y = ys[0]; } else y = Math.max(top + h / 2, bottom + 24 - h / 2);
   }
   box.style.left = `${Math.round(x)}px`;
   box.style.top = `${Math.round(y)}px`;
@@ -760,6 +764,6 @@ window.contactLight = {
   demo() { return demo && { site: demo.site.id, phase: demo.f.phase, alt: altitude(demo.f), vx: demo.f.vx }; },
   drawing() { return r.key; },
   // What the picture shows: how thick the dust is, whether the LM's shadow is on screen, what the marks under it say.
-  scene() { return { dust: r.dustI, shadow: !!r.shadowSeen, marks: r.footQuality || null, lm: r.lmBox || null, labels: r.labels || [] }; },
+  scene() { return { dust: r.dustI, shadow: !!r.shadowSeen, marks: r.footQuality || null, lm: r.lmBox || null, earth: r.earthBox || null, labels: r.labels || [] }; },
   hold(o) { Object.assign(input, o); }, // set the controls directly: { pad, throttle, rotate }
 };

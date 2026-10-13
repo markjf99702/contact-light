@@ -371,6 +371,13 @@ try {
   await dp.waitForFunction(() => window.contactLight.state().th < -8);
   await dp.keyboard.up('ArrowLeft');
   await dp.waitForFunction(() => Math.abs(window.contactLight.state().th) < 1);
+  // Falcon's line is long and the sky over a laptop is shallow: it still sits in the middle, clear of the Earth.
+  await dp.evaluate(() => { window.contactLight.fly('a15'); window.contactLight.autopilot(true); window.contactLight.speed(6); });
+  await dp.waitForFunction(() => !document.getElementById('moment').hidden, null, LONG);
+  await dp.evaluate(() => window.contactLight.speed(0));
+  const cap = await dp.locator('#moment').boundingBox(), earth = (await dp.evaluate(() => window.contactLight.scene())).earth;
+  assert.ok(Math.abs(cap.x + cap.width / 2 - 640) < 2, `the landing's line is in the middle (${cap.x}, ${cap.width})`);
+  assert.ok(earth[3] < cap.y || earth[1] > cap.y + cap.height || earth[2] < cap.x || earth[0] > cap.x + cap.width, 'and clear of the Earth');
   await desk.close();
 
   // ---------- the dust at Surveyor crater, and a phone on its side ----------
