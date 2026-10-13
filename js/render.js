@@ -419,43 +419,78 @@ function terrain(r, sc) {
   groundPlane(r, sc);
 
   // The surface, lit by the low Sun: faces toward it bright, faces away dark, shadows near black.
+  // The shade of each stretch goes into a strip one pixel high, drawn stretched under the band, so
+  // neighbouring stretches blend instead of standing side by side as blocks. Zoomed out, it's also
+  // averaged over a few pixels: a single pit is too small to show as more than a darker patch.
   const sun = g.sun * DEG, sinS = Math.sin(sun), cosS = Math.cos(sun);
-  const LEVELS = 28;
-  const paths = Array.from({ length: LEVELS }, () => new Path2D());
-  const used = new Uint8Array(LEVELS);
-  const lower = new Path2D();
-  for (let k = 0; k < idx.length - 1; k++) {
+  const cols = idx.length - 1;
+  let shades = new Float32Array(cols);
+  for (let k = 0; k < cols; k++) {
     const i = idx[k], j = idx[k + 1];
-    // Zoomed out, a segment spans several samples: average them, or the strip breaks into blocks.
     let sh = 0;
     for (let q = i; q < Math.max(i + 1, j); q++) sh += shadeAt(g, at(q), sinS, cosS);
-    sh /= Math.max(1, j - i);
-    const lv = Math.min(LEVELS - 1, Math.round((sh / 1.4) * (LEVELS - 1)));
-    const p = paths[lv];
-    used[lv] = 1;
-    const x0 = sx(i) - 0.4, x1 = sx(j) + 0.4, y0 = sy(i), y1 = sy(j);
-    p.moveTo(x0, y0);
-    p.lineTo(x1, y1);
-    p.lineTo(x1, y1 + band);
-    p.lineTo(x0, y0 + band);
-    p.closePath();
-    lower.moveTo(x0, y0 + band * 0.42);
-    lower.lineTo(x1, y1 + band * 0.42);
-    lower.lineTo(x1, y1 + band + 0.6);
-    lower.lineTo(x0, y0 + band + 0.6);
-    lower.closePath();
+    shades[k] = sh / Math.max(1, j - i);
+  }
+  const segPx = cols > 0 ? (sx(idx[cols]) - sx(idx[0])) / cols : 1;
+  const blur = Math.min(4, Math.round(2.2 / Math.max(0.5, segPx)));
+  if (blur > 0) {
+    const out = new Float32Array(cols);
+    for (let k = 0; k < cols; k++) {
+      let sum = 0, n = 0;
+      for (let q = Math.max(0, k - blur); q <= Math.min(cols - 1, k + blur); q++) { sum += shades[q]; n++; }
+      out[k] = sum / n;
+    }
+    shades = out;
   }
   const warm = site.world === 'earth' ? [0, 0, 0] : [8, 4, -2];
-  for (let lv = 0; lv < LEVELS; lv++) {
-    if (!used[lv]) continue;
-    const k = (lv / (LEVELS - 1)) * 1.4;
-    const w = k > 0.5 ? warm : [-3, -1, 4];
-    ctx.fillStyle = `rgb(${clamp(pal.soil[0] * k + w[0], 0, 255) | 0},${clamp(pal.soil[1] * k + w[1], 0, 255) | 0},${clamp(pal.soil[2] * k + w[2], 0, 255) | 0})`;
-    ctx.fill(paths[lv]);
+  const strip = r.bandStrip || (r.bandStrip = document.createElement('canvas'));
+  if (strip.width !== cols + 2) strip.width = cols + 2;
+  strip.height = 3;
+  const sctx = strip.getContext('2d');
+  const img = sctx.createImageData(cols + 2, 3);
+  for (let k = -1; k <= cols; k++) {
+    const sh = shades[clamp(k, 0, cols - 1)], w = sh > 0.5 ? warm : [-3, -1, 4];
+    for (let row = 0; row < 3; row++) {
+      const o = (row * (cols + 2) + k + 1) * 4;
+      img.data[o] = clamp(pal.soil[0] * sh + w[0], 0, 255);
+      img.data[o + 1] = clamp(pal.soil[1] * sh + w[1], 0, 255);
+      img.data[o + 2] = clamp(pal.soil[2] * sh + w[2], 0, 255);
+      img.data[o + 3] = 255;
+    }
   }
-  // The band's lower edge fades into the ground below it.
-  ctx.fillStyle = rgb(pal.soil, 0.72, 0.45);
-  ctx.fill(lower);
+  sctx.putImageData(img, 0, 0);
+  const face = new Path2D(), fades = [new Path2D(), new Path2D(), new Path2D()];
+  let ytop = Infinity, ybot = -Infinity;
+  for (let k = 0; k < cols; k++) {
+    const i = idx[k], j = idx[k + 1];
+    const x0 = sx(i) - 0.4, x1 = sx(j) + 0.4, y0 = sy(i), y1 = sy(j);
+    face.moveTo(x0, y0);
+    face.lineTo(x1, y1);
+    face.lineTo(x1, y1 + band);
+    face.lineTo(x0, y0 + band);
+    face.closePath();
+    ytop = Math.min(ytop, y0, y1);
+    ybot = Math.max(ybot, y0, y1);
+    // The lower part of the band fades into the ground below it, so a shadow is a darker patch
+    // along the top rather than a dark brick.
+    [[0.3, 0.55], [0.55, 0.8], [0.8, 1.04]].forEach(([a, b], q) => {
+      const p = fades[q];
+      p.moveTo(x0, y0 + band * a);
+      p.lineTo(x1, y1 + band * a);
+      p.lineTo(x1, y1 + band * b + 0.6);
+      p.lineTo(x0, y0 + band * b + 0.6);
+      p.closePath();
+    });
+  }
+  if (cols > 0) {
+    ctx.save();
+    ctx.clip(face);
+    ctx.imageSmoothingEnabled = true;
+    const xa0 = sx(idx[0]), xb0 = sx(idx[cols]);
+    ctx.drawImage(strip, 1, 1, cols, 1, xa0, ytop - 1, xb0 - xa0, ybot - ytop + band + 2);
+    ctx.restore();
+    [0.22, 0.42, 0.62].forEach((a, q) => { ctx.fillStyle = rgb(pal.soil, 0.7, a); ctx.fill(fades[q]); });
+  }
 
   // Pebbles and small pits on the surface band, fixed to the ground so they slide past.
   if (cam.s > 1.2) {
