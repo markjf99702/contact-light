@@ -889,43 +889,66 @@ function lmShadow(r, sc) {
     for (let k = 0; k < 4; k++) gx = wx + Math.max(0, wy - groundAt(g, gx)) / tan;
     return gx;
   };
-  const dz = z => band * (0.5 + z / 32);
+  // Across the track, as the ground in front of you is foreshortened (the small craters there are
+  // ellipses about a fifth as tall as they're wide), kept on the near side of the ground line.
+  const zk = Math.max(band / 32, 0.21 * cam.s);
+  const dz = z => Math.max(1, band * 0.5 + z * zk);
   const at = (gx, z) => [X(gx), Y(groundAt(g, gx)) + dz(z)];
   const near = proj(parts.pads[0][0] - parts.pad, 0); // the aft footpad's
   const far = proj(parts.boxes[1][1], parts.boxes[1][3]);
   r.shadowSeen = X(near) < W && X(far) > 0;
   if (!r.shadowSeen) return;
-  const shade = new Path2D();
-  // The stages: each a block swept along the Sun's rays, from its lower back corner to its upper front one.
+  const step = Math.max(1, 3 / cam.s);
+  // A line across the ground from one shadow point to another, following the ground's rise and fall.
+  const across = (path, [x0, z0], [x1, z1], first) => {
+    const n = Math.max(1, Math.ceil(Math.abs(x1 - x0) / step));
+    for (let k = first ? 0 : 1; k <= n; k++) {
+      const u = k / n, [px, py] = at(x0 + (x1 - x0) * u, z0 + (z1 - z0) * u);
+      k === 0 ? path.moveTo(px, py) : path.lineTo(px, py);
+    }
+  };
+  // Every piece goes round the same way, so where pieces overlap they add up rather than cancel out.
+  const turn = pts => pts.reduce((sum, [x0, y0], k) => { const [x1, y1] = pts[(k + 1) % pts.length]; return sum + x0 * y1 - x1 * y0; }, 0);
+  const shape = (path, pts) => {
+    if (turn(pts.map(([x, z]) => at(x, z))) < 0) pts = pts.slice().reverse();
+    pts.forEach((p, k) => across(path, k ? pts[k - 1] : p, p, k === 0));
+    across(path, pts[pts.length - 1], pts[0], false);
+    path.closePath();
+  };
+  // The solid parts: the stages, each a block swept along the Sun's rays, and the footpads.
+  const solid = new Path2D();
   for (const [x0, x1, y0, y1, zh] of parts.boxes) {
     const ga = Math.min(proj(x0, y0), proj(x0, y1)), gb = Math.max(proj(x1, y0), proj(x1, y1));
-    const step = Math.max(1, 3 / cam.s);
-    let first = true;
-    for (let x = ga; x <= gb + 1e-6; x += step) { const [px, py] = at(Math.min(x, gb), -zh); first ? shade.moveTo(px, py) : shade.lineTo(px, py); first = false; }
-    for (let x = gb; x >= ga - 1e-6; x -= step) { const [px, py] = at(Math.max(x, ga), zh); shade.lineTo(px, py); }
-    shade.closePath();
+    shape(solid, [[ga, -zh], [gb, -zh], [gb, zh], [ga, zh]]);
   }
-  // The footpads.
   for (const [bx, by, z] of parts.pads) {
     const [px, py] = at(proj(bx, by), z);
     const rx = Math.max(1.6, parts.pad * cam.s * 1.15), ry = Math.max(1.2, Math.min(rx * 0.5, band * 0.22));
-    shade.moveTo(px + rx, py);
-    shade.ellipse(px, py, rx, ry, 0, 0, Math.PI * 2);
+    solid.moveTo(px + rx, py);
+    solid.ellipse(px, py, rx, ry, 0, 0, Math.PI * 2);
   }
+  // The legs and the struts and braces between them: drawn one by one their shadows are long thin
+  // lines that read as marks on the ground, so they're one lighter shade, from the aft footpad's out
+  // past the two side legs' to where they meet the descent stage's.
+  const web = new Path2D();
+  const leg = k => [[proj(parts.legs[k][0], parts.legs[k][1]), parts.legs[k][2]], [proj(parts.legs[k][3], parts.legs[k][4]), parts.legs[k][5]]];
+  const [aftPad] = leg(0), [sideA, topA] = leg(2), [sideB, topB] = leg(3);
+  shape(web, [aftPad, sideA, topA, topB, sideB]);
+  web.addPath(solid);
   const a = sc.site.world === 'earth' ? 0.3 : 0.72; // grass under a high Texas Sun casts a softer shadow
-  ctx.fillStyle = `rgba(0,0,0,${a})`;
-  ctx.fill(shade);
-  // The legs, from each footpad's shadow up to the stage's.
-  ctx.strokeStyle = `rgba(0,0,0,${a})`;
-  ctx.lineWidth = Math.max(1.4, 0.55 * cam.s);
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  for (const [ax, ay, az, bx, by, bz] of parts.legs) {
-    const [x0, y0] = at(proj(ax, ay), az), [x1, y1] = at(proj(bx, by), bz);
-    ctx.moveTo(x0, y0);
-    ctx.lineTo(x1, y1);
-  }
-  ctx.stroke();
+  const LEGS = 0.85; // the legs' part is a shade lighter than the stages'
+  // Darkest where it meets the lander, easing off toward its far end, so a long shadow running off
+  // the screen reads as a shadow rather than as marks on the ground.
+  const fill = k => {
+    const gr = ctx.createLinearGradient(X(near), 0, Math.max(X(near) + 1, X(far)), 0);
+    gr.addColorStop(0, `rgba(0,0,0,${k})`);
+    gr.addColorStop(1, `rgba(0,0,0,${k * 0.55})`);
+    return gr;
+  };
+  ctx.fillStyle = fill(a * LEGS);
+  ctx.fill(web);
+  ctx.fillStyle = fill(1 - (1 - a) / (1 - a * LEGS));
+  ctx.fill(solid);
 }
 
 // ---------- dust ----------
