@@ -146,6 +146,7 @@ try {
 
   // ---------- out of fuel ----------
   await page.evaluate(() => { window.contactLight.fly('a14'); window.contactLight.setFuel(0.3); window.contactLight.speed(3); });
+  await until(() => window.contactLight.state().lines.some(l => /Antares, Houston\. We copy the abort\./.test(l)));
   await until(() => window.contactLight.state().screen === 'result');
   assert.equal((await state()).judged.outcome, 'abort');
   assert.equal(await page.textContent('#rTitle'), 'Abort');
@@ -159,6 +160,7 @@ try {
   const t0 = (await state()).t;
   await page.waitForTimeout(500);
   assert.equal((await state()).t, t0, 'paused means stopped');
+  assert.equal(await page.evaluate(() => window.contactLight.drawing()), (await state()).key, 'the paused flight stays on screen behind the menu');
   assert.equal(await page.locator('#pause .jd-foot').isVisible(), true, 'the drawer link is in the menu');
   await page.tap('#resumeBtn');
   await until(t => window.contactLight.state().t > t, t0);

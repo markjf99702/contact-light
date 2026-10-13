@@ -235,10 +235,7 @@ export function radioUpdate(radio, f, events, state) {
     else if (e.type === 'call30') push(line(radio, 'capcom', '30 seconds.'));
     else if (e.type === 'bingo') push(line(radio, 'capcom', 'Bingo.'));
     else if (e.type === 'contact') { radio.said.contact = true; const c = eventLine('contact', st, P); if (c) push(line(radio, c.role || 'lmp', c.text, { big: true })); }
-    else if (e.type === 'abort') {
-      push(line(radio, 'lmp', 'Abort stage.'));
-      push({ ...line(radio, 'capcom', `${P.lm}, Houston. We copy the abort.`), at: 2.5 });
-    }
+
   }
   if (f.phase !== 'flying') return out;
 
@@ -356,8 +353,9 @@ export function endingLines(site, judged) {
     lines = [L(['capcom', `${P.lm}, Houston. We’ve lost all data.`, 2.2])];
     card = 3.4;
   } else {
-    lines = [];
-    card = 5.5;
+    // Abort: the crew stages, and Houston watches the ascent stage climb away.
+    lines = [L(['lmp', 'Abort stage.', 0.2]), L(['capcom', `${P.lm}, Houston. We copy the abort.`, 2.6])];
+    card = 5.6;
   }
   return { lines, card };
 }

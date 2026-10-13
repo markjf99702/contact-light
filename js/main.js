@@ -50,7 +50,7 @@ let keyTilt = 0;
 function rodClick(d) {
   if (!cur || screen !== 'flight' || cur.f.phase !== 'flying') return;
   sound.unlock();
-  if (mode === 'arcade') { setThrottle(input.throttle + d * 0.05); return; }
+  if (cur.mode === 'arcade') { setThrottle(input.throttle + d * 0.05); return; }
   input.rod += d;
   sound.play('click');
   const b = d > 0 ? $('rodUp') : $('rodDown');
@@ -81,7 +81,7 @@ for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) {
   track.addEventListener(ev, e => { if (held.pad === e.pointerId) { held.pad = null; setPad(0); } });
 }
 function setPad(v) {
-  if (mode === 'arcade') input.rotate = v;
+  if (cur && cur.mode === 'arcade') input.rotate = v;
   else input.pad = v;
 }
 
@@ -100,8 +100,10 @@ addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input, textarea')) return;
   const k = e.key;
   if (screen === 'flight') {
-    if (k === 'ArrowUp' || k === 'w' || k === 'W') { e.preventDefault(); if (!e.repeat || mode === 'arcade') rodClick(1); }
-    else if (k === 'ArrowDown' || k === 's' || k === 'S') { e.preventDefault(); if (!e.repeat || mode === 'arcade') rodClick(-1); }
+    // The rate switch clicks once a press; Arcade's throttle keeps moving while the key is held.
+    const repeatOk = cur && cur.mode === 'arcade';
+    if (k === 'ArrowUp' || k === 'w' || k === 'W') { e.preventDefault(); if (!e.repeat || repeatOk) rodClick(1); }
+    else if (k === 'ArrowDown' || k === 's' || k === 'S') { e.preventDefault(); if (!e.repeat || repeatOk) rodClick(-1); }
     else if (k === 'ArrowLeft' || k === 'ArrowRight' || k === 'a' || k === 'A' || k === 'd' || k === 'D') { e.preventDefault(); held.keys.add(k.toLowerCase().replace('arrow', '')); sound.unlock(); }
     else if (k === 'Escape' || k === 'p' || k === 'P') { e.preventDefault(); pause(); }
   } else if (screen === 'paused' && (k === 'Escape' || k === 'p' || k === 'P')) { e.preventDefault(); resume(); }
@@ -209,7 +211,7 @@ let last = performance.now(), acc = 0;
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
-  const running = screen === 'flight' || screen === 'ending' || screen === 'result' ? cur : demo;
+  const running = cur && ['flight', 'paused', 'ending', 'result'].includes(screen) ? cur : demo;
   if (running && screen !== 'paused') {
     acc += dt * speed;
     let n = 0;
@@ -286,8 +288,8 @@ function onEvent(c, e) {
       c.pending = c.pending.filter(l => l.big); // drop calls that hadn't been made
       for (const l of c.ending.lines) c.pending.push({ ...l, at: l.at });
       if (j.ok) {
-        c.newBest = recordLanding(store, c.mode, c.site.free ? `free` : c.site.id, j, e.record);
-        if (c.site.free) { store.free.landed++; if (j.tier === 'gold') store.free.gold++; c.newBest = false; delete store.best[c.mode].free; }
+        if (c.site.free) { store.free.landed++; if (j.tier === 'gold') store.free.gold++; }
+        else c.newBest = recordLanding(store, c.mode, c.site.id, j, e.record);
         save(store);
       }
       show('ending');
@@ -315,7 +317,7 @@ function say(c, l) {
 
 let stripTick = 0;
 function draw(c, dt) {
-  const cam = renderFrame(r, { key: c.key, site: c.site, g: c.g, f: c.f, view: c.demo ? view : view, dt, marks: !c.demo });
+  const cam = renderFrame(r, { key: c.key, site: c.site, g: c.g, f: c.f, view, dt, marks: !c.demo });
   if (c.demo || $('hud').hidden) return;
   const f = c.f;
   const alt = Math.max(0, altitude(f));
@@ -356,7 +358,7 @@ function draw(c, dt) {
   $('acaNeedle').style.transform = `translateX(${Math.max(-1, Math.min(1, tilt / lim)) * (track.clientWidth / 2 - 10)}px)`;
   setText('acaRead', Math.abs(tilt) < 0.5 ? 'UPRIGHT' : tilt < 0 ? `← ${Math.round(-tilt)}°` : `${Math.round(tilt)}° →`);
   // Sound.
-  sound.engine(fly ? f.thr : 0);
+  sound.engine(fly && screen === 'flight' ? f.thr : 0);
   c.jetT -= dt;
   if (fly && f.jets > 0.35 && c.jetT <= 0) { sound.play('jets'); c.jetT = 0.14; }
   // The strip, a few times a second is plenty.
@@ -448,7 +450,8 @@ function renderFree() {
 function rollFree(seed) {
   let made = null;
   for (let k = 0; k < 20 && !made; k++) made = makeFreeSite(seed + k);
-  free = made;
+  free = made || makeFreeSite(1); // ground 1 is known to fly
+  if (!free) return;
   store.free.seed = free.site.seed;
   save(store);
 }
@@ -488,6 +491,7 @@ $('backBtn').addEventListener('click', showTitle);
 function pause() {
   if (screen !== 'flight') return;
   show('paused');
+  sound.engine(0);
   sound.stopSpeech();
   const s = cur.site;
   $('pauseMeta').textContent = s.free ? `Free flight · ground ${s.seed}` : `${s.name} · ${s.place}`;
@@ -592,7 +596,7 @@ window.contactLight = {
     return {
       screen, mode: c.mode, site: c.site.id, phase: f.phase, t: f.t, x: f.x, alt: altitude(f), vx: f.vx, vy: f.vy,
       th: f.th / DEG, rate: f.rateCmd, throttle: f.thr, fuel: pct(f), contact: f.contactAt != null, low: f.lowAt != null,
-      judged: c.judged && { outcome: c.judged.outcome, tier: c.judged.tier }, record: c.record || null,
+      judged: c.judged && { outcome: c.judged.outcome, tier: c.judged.tier }, record: c.record || null, key: c.key,
       lines: [...$('radio').children].map(p => p.textContent),
     };
   },
@@ -601,4 +605,5 @@ window.contactLight = {
   setFuel(p) { if (cur) cur.f.prop = (p / 100) * 8248; },
   fly(id, m = 'p66') { startFlight(siteById(id), m); },
   demo() { return demo && { site: demo.site.id, phase: demo.f.phase }; },
+  drawing() { return r.key; },
 };
