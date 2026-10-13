@@ -4,6 +4,14 @@
 
 **Land on the Moon the way the Apollo commanders did: a foot per second at a time.** Each landing starts at low gate, about 500 feet up and still moving forward, and something is wrong with the spot the computer picked: the boulders round West crater, the middle of Surveyor crater, a slope at Hadley. You take over in P66, the program every crew landed in. The computer holds whatever descent rate you click, you tilt the LM to slow down or fly on, and the LM pilot calls your numbers the way Aldrin did ("40 feet, down 2 1/2. Picking up some dust.") while Houston counts down the fuel. Then the probes touch, the blue lunar contact lamp comes on, and you hear the real words from that landing, with the big one ("The Eagle has landed.") written large across the sky above you.
 
+<p align="center">
+  <img src="docs/phone-flight.png" alt="Apollo 11, 30 feet up and coming down at 2.9 ft/s over smooth ground past West crater: the dust blows out from under the engine, green marks show the footpads would land on 0.9° of slope, the low-level light is on and Aldrin says 6 percent, quantity light" width="250">
+  &nbsp;
+  <img src="docs/phone-landed.png" alt="Eagle on its footpads with the lunar contact lamp lit, and above it in large letters: Armstrong, 102:44:37, Houston, Tranquility Base here. The Eagle has landed." width="250">
+  &nbsp;
+  <img src="docs/phone-plaque.png" alt="A gold plaque for Tranquility Base, with the table that judged it: down at 2.0 ft/s, 0.0 forward, upright, 1.0° slope, clear of rocks, 956 ft from the target, 5.0% fuel before the 60-second call, all gold" width="250">
+</p>
+
 ## How it plays
 
 - **The rate switch** (▲ ▼, or the ↑ ↓ keys): each click changes the descent rate the computer holds by a foot per second. It starts wherever you were coming down when you took over, so the first thing to do is usually click it up a few times.
@@ -46,6 +54,7 @@ It's a static site: plain HTML, CSS and JavaScript, with no build step.
 ```sh
 npx serve .                   # or any static file server, then open the printed address
 npm test                      # unit tests, then flies it in Chromium through the real page (needs Playwright)
+node tools/screenshots.mjs    # redraws docs/*.png and og.png, the link preview
 node tools/make-icons.mjs     # redraws the PNG icons from icon.svg
 ```
 
@@ -65,3 +74,4 @@ To put it online with GitHub Pages: **Settings → Pages → Build and deploymen
 - `js/main.js`: the page: screens, controls and the loop.
 - `fonts/`: Jost and B612 Mono (SIL Open Font License), served from here so nothing loads from elsewhere. B612 was drawn for aircraft cockpit displays.
 - `sw.js`: keeps a copy of the game for flying offline.
+- `tools/screenshots.mjs` draws the README's pictures in `docs/` and the link preview, `og.png`, from the game itself; `tools/make-icons.mjs` draws the icons.

@@ -718,7 +718,7 @@ window.contactLight = {
   speed(k) { speed = k; },
   setFuel(p) { if (cur) cur.f.prop = (p / 100) * 8248; },
   fly(id, m = 'p66') { startFlight(siteById(id), m); },
-  demo() { return demo && { site: demo.site.id, phase: demo.f.phase }; },
+  demo() { return demo && { site: demo.site.id, phase: demo.f.phase, alt: altitude(demo.f), vx: demo.f.vx }; },
   drawing() { return r.key; },
   // What the picture shows: how thick the dust is, whether the LM's shadow is on screen, what the marks under it say.
   scene() { return { dust: r.dustI, shadow: !!r.shadowSeen, marks: r.footQuality || null }; },

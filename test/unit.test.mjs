@@ -525,6 +525,17 @@ test('every site has what the game needs', () => {
   assert.equal(STEPS.length, 5);
 });
 
+test('the link preview and the README pictures are there', async () => {
+  const html = await readFile(join(root, 'index.html'), 'utf8');
+  assert.match(html, /<meta property="og:image" content="https:\/\/contact-light\.junkdrawer\.works\/og\.png">/);
+  const og = await readFile(join(root, 'og.png'));
+  assert.deepEqual([og.readUInt32BE(16), og.readUInt32BE(20)], [1200, 630], 'og.png is 1200 x 630');
+  const readme = await readFile(join(root, 'README.md'), 'utf8');
+  const pics = [...readme.matchAll(/src="(docs\/[^"]+\.png)"/g)].map(m => m[1]);
+  assert.ok(pics.length >= 2, 'a row of screenshots');
+  for (const p of pics) await readFile(join(root, p));
+});
+
 test('the offline copy lists every file the page uses', async () => {
   const sw = await readFile(join(root, 'sw.js'), 'utf8');
   const shell = sw.slice(sw.indexOf('const SHELL = ['), sw.indexOf('];'));
