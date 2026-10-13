@@ -14,6 +14,7 @@ import { SITES, siteById } from '../js/sites.js';
 import { makeFreeSite } from '../js/freeflight.js';
 import { clean, recordLanding, quality } from '../js/store.js';
 import { STEPS, ARCADE_STEPS, createCoach, coachUpdate } from '../js/coach.js';
+import { literalPilot } from './pilot.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DT = 1 / 60;
@@ -472,27 +473,77 @@ test('Free flight rolls new ground that can be landed, the same ground for the s
   assert.deepEqual(a.site.start, b.site.start);
 });
 
-test('training teaches the controls of the mode you fly, step by step to the end', () => {
+// Flies Ellington the way the hints say, at a human pace, and keeps what was shown along the way.
+function followTheHints(mode) {
   const site = siteById('ellington');
-  for (const mode of ['p66', 'arcade']) {
-    const g = buildGround({ ...site.ground, sun: site.sun });
-    const f = createFlight(site, g, mode);
-    const ap = createAutopilot(site, g, f.veh, mode);
-    const coach = createCoach(mode);
-    const seen = new Set();
-    while (f.t < 200 && f.phase === 'flying') {
-      step(f, autopilotInput(ap, f), DT);
-      seen.add(coachUpdate(coach, f, site, altitude(f)));
-    }
-    const steps = mode === 'arcade' ? ARCADE_STEPS : STEPS;
-    assert.equal(coach.step, steps.length - 1, `${mode}: the lesson ran to its last step`);
-    assert.ok(seen.size >= steps.length - 1, `${mode}: ${seen.size} steps shown`);
+  const g = buildGround({ ...site.ground, sun: site.sun });
+  const f = createFlight(site, g, mode);
+  const coach = createCoach(mode);
+  const pilot = literalPilot(mode, site);
+  const steps = mode === 'arcade' ? ARCADE_STEPS : STEPS;
+  const descend = steps.findIndex(st => st.nudge === 'stop') + 1; // the step that comes down onto the pad
+  const seen = new Set();
+  let rec = null, reached = null;
+  while (f.t < 300 && !rec) {
+    const alt = altitude(f);
+    const shown = coachUpdate(coach, f, site, alt);
+    seen.add(shown.text);
+    if (coach.step === descend && !reached) reached = { alt, x: f.x };
+    for (const e of step(f, pilot(f, shown.text), DT)) if (e.type === 'touchdown' || e.type === 'abort') rec = e.record;
   }
+  return { site, steps, coach, seen, rec, reached, j: rec && judge(rec, site) };
+}
+
+test('following the training\'s hints to the letter lands on the pad, in both modes', () => {
+  for (const mode of ['p66', 'arcade']) {
+    const { site, steps, coach, seen, rec, reached, j } = followTheHints(mode);
+    assert.ok(rec, `${mode}: it came down`);
+    assert.equal(j.outcome, 'landed', `${mode}: ${j.reason}`);
+    assert.ok(['gold', 'silver'].includes(j.tier), `${mode}: ${j.tier} ${JSON.stringify(j.rows.map(r => [r.key, r.value]))}`);
+    assert.ok(rec.dist <= site.target.tiers[1], `${mode}: on the pad (${rec.dist.toFixed(0)} ft from it)`);
+    // It held its height all the way over and only came down once it had stopped over the pad.
+    assert.ok(reached && reached.alt > 100 && Math.abs(reached.x - site.target.x) < 20, `${mode}: started down at ${reached && reached.alt.toFixed(0)} ft, ${reached && (reached.x - site.target.x).toFixed(0)} ft from the pad`);
+    assert.equal(coach.step, steps.length - 1, `${mode}: the lesson ran to its last step`);
+    for (const st of steps) assert.ok(seen.has(st.text), `${mode}: never showed "${st.text}"`);
+  }
+  // P66's lesson has you click ▲ before it hands you the hand controller: every Moon landing needs it.
+  assert.ok(STEPS.findIndex(st => st.at === 'rod' && /▲/.test(st.text)) < STEPS.findIndex(st => st.at === 'aca'));
+  assert.match(STEPS[0].text, /Tap ▼ three times/);
   // Arcade has a throttle lever and no rate switch, so its lesson never asks for ▲ or ▼.
   assert.ok(ARCADE_STEPS.every(st => !/[▲▼]/.test(st.text) && st.at !== 'rod'));
   assert.match(ARCADE_STEPS[0].text, /throttle/);
   assert.equal(ARCADE_STEPS[0].at, 'lever');
-  assert.match(STEPS[0].text, /Tap ▼ three times/);
+});
+
+test('low down, a training hint says what is going wrong, in the mode\'s own controls', () => {
+  const site = siteById('ellington');
+  const g = buildGround({ ...site.ground, sun: site.sun });
+  const pad = site.target.x;
+  const hint = (mode, start, step = 0) => {
+    const f = createFlight({ ...site, start: { x: 0, ...start } }, g, mode);
+    const c = createCoach(mode);
+    c.step = step;
+    return coachUpdate(c, f, site, altitude(f));
+  };
+  // 30 feet up and still moving forward, whatever the lesson was on.
+  assert.match(hint('p66', { alt: 30, vx: 5, vy: -2 }, 2).text, /^Nearly down and still moving forward: drag left, toward BACK, until FWD reads 0\.$/);
+  assert.match(hint('arcade', { alt: 30, vx: -5, vy: -2 }, 2).text, /^Nearly down and still moving back: lean forward until BACK reads 0, then stand it up\.$/);
+  // Coming down too fast: ▲ in P66, the throttle in Arcade.
+  assert.equal(hint('p66', { alt: 30, vx: 0, vy: -7 }).at, 'rod');
+  assert.match(hint('p66', { alt: 30, vx: 0, vy: -7 }).text, /tap ▲/);
+  assert.match(hint('arcade', { alt: 30, vx: 0, vy: -7 }).text, /push the throttle up/);
+  // High up it's the lesson itself.
+  const high = hint('p66', { alt: 150, vx: 5, vy: -7 }).text;
+  assert.ok(STEPS.some(st => st.text === high), high);
+  // Stopped short of the pad, or drifting over it, it says which way to go.
+  const stop = STEPS.findIndex(st => st.nudge === 'stop');
+  assert.match(hint('p66', { x: pad - 60, alt: 140, vx: 0, vy: 0 }, stop).text, /^Stopped short of the pad\. Nudge the controller right/);
+  assert.match(hint('arcade', { x: pad + 60, alt: 140, vx: 0, vy: 0 }, ARCADE_STEPS.findIndex(st => st.nudge === 'stop')).text, /^Past the pad\. Lean back a touch/);
+  assert.match(hint('p66', { x: pad + 5, alt: 140, vx: -1.2, vy: 0 }, stop).text, /^Drifting back\. Nudge the controller right, toward FWD/);
+  // None of Arcade's hints ask for the rate switch it doesn't have.
+  for (const [start, k] of [[{ alt: 30, vx: 5, vy: -2 }, 0], [{ alt: 30, vx: 0, vy: -7 }, 0], [{ x: pad - 60, alt: 140, vx: 0, vy: 0 }, 4], [{ x: pad + 5, alt: 140, vx: 1.2, vy: 0 }, 4], [{ alt: 80, vx: 1, vy: -2 }, 5]]) {
+    assert.doesNotMatch(hint('arcade', start, k).text, /[▲▼]/);
+  }
 });
 
 // ---------- saved data and the rest ----------
@@ -522,7 +573,7 @@ test('every site has what the game needs', () => {
     assert.ok(s.ground.span[0] < s.start.x && s.target.x < s.ground.span[1], s.id);
   }
   assert.equal(SITES.filter(s => !s.training).map(s => s.name).join(', '), 'Apollo 11, Apollo 12, Apollo 14, Apollo 15, Apollo 16, Apollo 17');
-  assert.equal(STEPS.length, 5);
+  assert.equal(STEPS.length, 6);
 });
 
 test('the link preview and the README pictures are there', async () => {

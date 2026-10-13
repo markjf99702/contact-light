@@ -28,10 +28,10 @@ export const SITES = [
     dust: { top: 22, thick: 1, dense: 0.25 },
     people: { cdr: 'You', lmp: 'Ellington', capcom: 'Ellington', lm: 'LLTV', first: '' },
     ground: { span: [-700, 1500], seed: 3, bumps: [[0.25, 60], [0.06, 9]] },
-    pad: { x: 380, w: 70 },
+    pad: { x: 260, w: 70 },
     start: { x: 0, alt: 150, vx: 0, vy: 0 },
-    target: { x: 380, tiers: [15, 40], label: 'PAD' },
-    brief: 'The Lunar Landing Training Vehicle: a jet holds up five-sixths of its weight, so the rest falls the way things fall on the Moon. Every Apollo commander flew it. Come down a little, fly over to the pad, stop, and set it down.',
+    target: { x: 260, tiers: [15, 40], label: 'PAD' },
+    brief: 'The Lunar Landing Training Vehicle: a jet holds up five-sixths of its weight, so the rest falls the way things fall on the Moon. Every Apollo commander flew it. Come down a little, hold your height, fly over to the pad, stop, and set it down.',
     history: 'Neil Armstrong ejected from its forerunner, the LLRV, here in May 1968, a moment before it hit the ground. Fourteen months later he landed Eagle.',
   },
   {

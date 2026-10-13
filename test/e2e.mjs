@@ -69,9 +69,15 @@ try {
   for (let k = 0; k < 3; k++) { await page.tap('#rodDown'); await page.waitForTimeout(120); }
   await until(() => window.contactLight.state().rate === -3);
   assert.equal(await page.textContent('#rodRead'), 'DOWN 3');
-  await until(() => /drag the hand controller right/.test(document.getElementById('coachText').textContent));
   await until(() => Math.abs(window.contactLight.state().vy + 3) < 0.3);
   assert.match(await page.textContent('#roRateLbl'), /DOWN/);
+  // Then ▲ three times, to hold the height all the way over to the pad.
+  await until(() => /Tap it three times to stop and hold your height/.test(document.getElementById('coachText').textContent));
+  for (let k = 0; k < 3; k++) { await page.tap('#rodUp'); await page.waitForTimeout(120); }
+  await until(() => window.contactLight.state().rate === 0);
+  assert.equal(await page.textContent('#rodRead'), 'HOLD');
+  await until(() => /drag the hand controller right, toward FWD/.test(document.getElementById('coachText').textContent));
+  await until(() => Math.abs(window.contactLight.state().vy) < 0.3);
 
   // Hold the hand controller over to the right: the LM leans over and speeds up.
   const [ax, ay, ab] = await centre('#acaTrack');
@@ -80,9 +86,9 @@ try {
   await until(() => window.contactLight.state().th > 15);
   await until(() => window.contactLight.state().vx > 6);
   // A second thumb clicks the rate switch while the first holds the controller.
-  await touch('touchStart', [[ax + ab.width / 2 - 8, ay], [...(await centre('#rodUp')).slice(0, 2)]]);
+  await touch('touchStart', [[ax + ab.width / 2 - 8, ay], [...(await centre('#rodDown')).slice(0, 2)]]);
   await touch('touchEnd', [[ax + ab.width / 2 - 8, ay]]);
-  await until(() => window.contactLight.state().rate === -2);
+  await until(() => window.contactLight.state().rate === -1);
   assert.ok((await state()).th > 15, 'still leaning while the other thumb works the rate switch');
   await until(() => /^tilted forward (1[5-9]|20) degrees$/.test(document.getElementById('aca').getAttribute('aria-valuetext')));
   await touch('touchEnd', []);
@@ -90,10 +96,10 @@ try {
   const vx = (await state()).vx;
   await page.waitForTimeout(800);
   assert.ok(Math.abs((await state()).vx - vx) < 0.4, 'let go, it stands upright and coasts');
-  await until(() => /Drag it left to slow down/.test(document.getElementById('coachText').textContent));
+  await until(() => /As the pad comes under you, drag left, toward BACK, until FWD reads 0/.test(document.getElementById('coachText').textContent));
   // The keyboard works too.
   await page.keyboard.press('ArrowUp');
-  await until(() => window.contactLight.state().rate === -1);
+  await until(() => window.contactLight.state().rate === 0);
   await noSideways('flight');
 
   // Hand over to the autopilot to finish the landing.
@@ -244,7 +250,7 @@ try {
   await touch('touchStart', [[tl.x + tl.width / 2, tl.y + tl.height * 0.62]]);
   await touch('touchMove', [[tl.x + tl.width / 2, tl.y + tl.height * 0.72]]);
   await touch('touchEnd', []);
-  await until(() => /Push the throttle back up/.test(document.getElementById('coachText').textContent));
+  await until(() => /Push the throttle up past a third/.test(document.getElementById('coachText').textContent));
   await page.tap('#menuBtn');
   await page.tap('#quitBtn');
   await page.locator('#title').waitFor();
