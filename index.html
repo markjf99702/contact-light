@@ -58,14 +58,18 @@
       <div class="lamp amber" id="lampLow"><span>LOW<br>LEVEL</span></div>
       <div class="lamp blue" id="lampContact"><span>LUNAR<br>CONTACT</span></div>
     </div>
-    <div class="aca" id="aca" role="slider" tabindex="0" aria-label="Hand controller: drag left or right to tilt" aria-valuemin="-20" aria-valuemax="20" aria-valuenow="0">
+    <div class="aca" id="aca" role="slider" tabindex="0" aria-label="Hand controller: drag left to tilt back and slow down, right to speed up" aria-valuemin="-20" aria-valuemax="20" aria-valuenow="0">
       <span class="lbl" id="acaLbl">HAND CONTROLLER</span>
       <div class="aca-track" id="acaTrack">
         <i class="tick" style="left:10%"></i><i class="tick" style="left:30%"></i><i class="tick mid" style="left:50%"></i><i class="tick" style="left:70%"></i><i class="tick" style="left:90%"></i>
         <div class="aca-needle" id="acaNeedle"></div>
         <div class="aca-knob" id="acaKnob"></div>
       </div>
-      <b class="aca-read" id="acaRead">UPRIGHT</b>
+      <div class="aca-foot">
+        <span class="aca-end back" aria-hidden="true">BACK</span>
+        <b class="aca-read" id="acaRead">UPRIGHT</b>
+        <span class="aca-end fwd" aria-hidden="true">FWD</span>
+      </div>
     </div>
     <p class="keys" id="keys">↑ ↓ rate · ← → tilt · Esc menu</p>
   </section>
@@ -105,7 +109,7 @@
         <summary>How to fly</summary>
         <ul>
           <li><b>The rate switch</b> (▲ ▼, or the ↑ ↓ keys): the computer holds whatever descent rate you set, and each click changes it by a foot per second. That's P66, the program every Apollo commander landed in.</li>
-          <li><b>The hand controller</b> (drag it, or hold ← →): tilt back to slow down, forward to speed up. Let go and the LM stands upright again.</li>
+          <li><b>The hand controller</b> (drag it, or hold ← →): left, toward BACK, tilts the LM back to slow down; right, toward FWD, speeds you up. Let go and it stands upright again.</li>
           <li><b>The numbers:</b> altitude, how fast you're coming down, speed along the ground, and fuel. The marks under the LM show where its footpads will land: green is good, amber is rough, red is no.</li>
           <li><b>Fuel:</b> the low-level light comes on at 5.6%. Houston calls 60 and 30 seconds to Bingo, and at Bingo you have 20 seconds to land or abort.</li>
           <li><b>Contact light:</b> the probes under the footpads, 67 inches long, have touched. Hold steady; the engine stops when the footpads do.</li>

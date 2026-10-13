@@ -259,7 +259,10 @@ test('a crash card names everything that went wrong, and only that', () => {
   assert.equal(j.title, 'Hard landing');
   assert.match(j.reason, /14 ft\/s down while moving 58 ft\/s forward\. The legs were built for 10 coming straight down, and no more than 4 ft\/s along the ground\./);
   assert.match(j.tip, /Click the rate up/);
-  assert.match(j.tip, /tilt back until FWD reads 0/);
+  assert.match(j.tip, /drag the hand controller left, toward BACK, until FWD reads 0/);
+  // Drifting back, it's the other way; in Arcade it's a lean.
+  assert.match(judge(rec({ side: 5, fwd: -5 }), site).tip, /^Stop over the spot first: drag the hand controller right, toward FWD, until BACK reads 0, then come down\.$/);
+  assert.match(judge(rec({ side: 5, fwd: 5, mode: 'arcade' }), site).tip, /lean back until FWD reads 0 and stand it up/);
   assert.deepEqual(j.rows.filter(r => r.tier === 'fail').map(r => r.key), ['down', 'side']);
   // In Arcade there's no rate switch to click.
   assert.match(judge(rec({ down: 14, mode: 'arcade' }), site).tip, /Push the throttle up/);

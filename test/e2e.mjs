@@ -66,6 +66,11 @@ try {
   await until(() => window.contactLight.state().screen === 'flight');
   await until(() => /Tap ▼ three times/.test(document.getElementById('coachText').textContent));
   assert.equal(await page.locator('#coach').isVisible(), true, 'training shows hints');
+  // The hand controller says which way is which: BACK at the left end, FWD at the right.
+  const ends = await page.$$eval('.aca-end', els => els.map(e => { const b = e.getBoundingClientRect(); return [e.textContent, b.left, b.right]; }));
+  const track = await page.locator('#acaTrack').boundingBox();
+  assert.deepEqual(ends.map(e => e[0]), ['BACK', 'FWD']);
+  assert.ok(ends[0][1] < track.x + track.width * 0.25 && ends[1][2] > track.x + track.width * 0.75, `at the ends of the track: ${JSON.stringify(ends)}`);
   for (let k = 0; k < 3; k++) { await page.tap('#rodDown'); await page.waitForTimeout(120); }
   await until(() => window.contactLight.state().rate === -3);
   assert.equal(await page.textContent('#rodRead'), 'DOWN 3');
@@ -116,7 +121,7 @@ try {
   await page.tap('#nextBtn');
   await page.locator('#brief').waitFor();
   assert.match(await page.textContent('#bText'), /West crater/);
-  assert.equal(await page.textContent('#bControls'), '▲ slows your descent · drag the hand controller to steer', 'the briefing names the two controls');
+  assert.equal(await page.textContent('#bControls'), '▲ slows your descent · drag the hand controller left to slow down', 'the briefing names the two controls, and which way slows you down');
   // Take over while the briefing's own flight is low in its dust: the radio hears only yours.
   await page.evaluate(() => window.contactLight.speed(8));
   await until(() => { const d = window.contactLight.demo(); return d.site === 'a11' && d.alt < 50 && window.contactLight.scene().dust > 0.12; });
@@ -195,7 +200,7 @@ try {
   await until(() => window.contactLight.state().screen === 'result');
   assert.equal(await page.textContent('#rTitle'), 'Hard landing');
   assert.equal(await page.locator('#rRows .tier').count(), 2, 'only the two numbers that broke it are marked');
-  assert.match(await page.textContent('#rTip'), /tilt back until FWD reads 0/);
+  assert.match(await page.textContent('#rTip'), /drag the hand controller left, toward BACK, until FWD reads 0/);
   assert.doesNotMatch(await page.textContent('#loopList'), /looking good/i, 'nobody said it was going well');
 
   // ---------- far past the end of the site ----------

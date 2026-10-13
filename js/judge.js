@@ -75,7 +75,7 @@ export function judge(rec, site) {
   const slowDown = arcade
     ? 'Push the throttle up as you get low: 3 or 4 ft/s down by 50 feet, 2 or less for the last few.'
     : 'Click the rate up as you get low: 3 or 4 ft/s down by 50 feet, 2 or less for the last few.';
-  const stop = `stop moving along the ground before you come down: ${arcade ? 'turn' : 'tilt'} back until FWD reads 0`;
+  const stop = `stop moving along the ground before you come down: ${stopAlong(arcade, along === 'back')}`;
   if (rec.struck) {
     outcome = 'crash'; title = 'Crashed';
     reason = 'The descent stage hit the ground before the footpads did.';
@@ -97,7 +97,7 @@ export function judge(rec, site) {
   } else if (side > LIMITS.side[2]) {
     outcome = 'tipped'; title = 'Tipped over'; why = 'side';
     reason = `Still moving ${one(side)} ft/s ${along} when the footpads caught. The legs take ${LIMITS.side[2]}.`;
-    tip = `Stop over the spot first: ${arcade ? 'turn' : 'tilt'} against the drift until FWD reads 0, then come down.`;
+    tip = `Stop over the spot first: ${stopAlong(arcade, along === 'back')}, then come down.`;
   } else if (tilt > LIMITS.tilt[2]) {
     outcome = 'tipped'; title = 'Tipped over'; why = 'tilt';
     reason = `Leaning ${one(tilt)}° as it touched; one leg took it all and it went over.`;
@@ -114,6 +114,12 @@ export function judge(rec, site) {
   const worst = Math.max(...rows.map(r => Math.min(2, r.rank)));
   for (const r of rows) r.tier = r.rank <= 2 ? TIERS[r.rank] : 'fail';
   return { ok, outcome, why, title: ok ? TIERS[worst] : title, tier: ok ? TIERS[worst] : null, rows, reason, tip };
+}
+
+// How to stop moving along the ground, in the controls of the mode you flew.
+function stopAlong(arcade, back) {
+  if (arcade) return back ? 'lean forward until BACK reads 0 and stand it up' : 'lean back until FWD reads 0 and stand it up';
+  return back ? 'drag the hand controller right, toward FWD, until BACK reads 0' : 'drag the hand controller left, toward BACK, until FWD reads 0';
 }
 
 function rockRow(rock, bellHit) {

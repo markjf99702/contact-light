@@ -164,7 +164,7 @@ function startFlight(site, m = mode) {
   $('rod').hidden = m === 'arcade';
   $('lever').hidden = m !== 'arcade';
   $('acaLbl').textContent = m === 'arcade' ? 'ROTATE' : 'HAND CONTROLLER';
-  $('aca').setAttribute('aria-label', m === 'arcade' ? 'Rotate: drag left or right to turn' : 'Hand controller: drag left or right to tilt');
+  $('aca').setAttribute('aria-label', m === 'arcade' ? 'Rotate: drag left to turn back, right to turn forward' : 'Hand controller: drag left to tilt back and slow down, right to speed up');
   $('aca').setAttribute('aria-valuemin', m === 'arcade' ? '-90' : '-20');
   $('aca').setAttribute('aria-valuemax', m === 'arcade' ? '90' : '20');
   $('keys').textContent = m === 'arcade' ? '↑ ↓ throttle · ← → rotate · Esc menu' : '↑ ↓ rate · ← → tilt · Esc menu';
@@ -571,7 +571,7 @@ function showBrief(site) {
   $('bBest').textContent = e ? `Your best${mode === 'arcade' ? ' in Arcade' : ''}: ${e.tier}, ${e.down} ft/s down, ${feet(e.dist)} away.` : '';
   $('goBtn').textContent = mode === 'arcade' ? 'Take over (Arcade)' : 'Take over';
   // The two controls in a line, for anyone who skipped the training.
-  $('bControls').textContent = mode === 'arcade' ? 'Throttle up to slow your descent · drag to rotate' : '▲ slows your descent · drag the hand controller to steer';
+  $('bControls').textContent = mode === 'arcade' ? 'Throttle up to slow your descent · drag left to lean back and slow down' : '▲ slows your descent · drag the hand controller left to slow down';
   $('bControls').hidden = !!site.training;
   requestAnimationFrame(() => drawProfile($('bProfile'), groundFor(site), site, { labels: true, start: true }));
 }

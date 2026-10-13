@@ -125,7 +125,15 @@ button { font: inherit; color: inherit; }
 }
 .aca-knob::after { content: ""; position: absolute; left: 50%; top: 12px; bottom: 12px; width: 4px; margin-left: -2px; border-radius: 2px; background: rgba(255, 255, 255, .28); }
 .aca-needle { position: absolute; bottom: 4px; left: 50%; width: 0; height: 0; margin-left: -6px; border: 6px solid transparent; border-bottom: 8px solid var(--green); pointer-events: none; filter: drop-shadow(0 0 4px rgba(150, 255, 120, .6)); }
-.aca-read { font: 700 12px/1 var(--mono); color: var(--green); text-align: center; text-shadow: 0 0 8px rgba(150, 255, 120, .3); }
+.aca-read { font: 700 12px/1 var(--mono); color: var(--green); text-align: center; text-shadow: 0 0 8px rgba(150, 255, 120, .3); white-space: nowrap; }
+/* Which way the controller pushes, at the two ends of its track: BACK slows you down. */
+.aca-foot { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; }
+.aca-end { font: 600 9.5px/1 var(--disp); letter-spacing: .16em; color: var(--ink2); white-space: nowrap; display: flex; align-items: center; gap: 5px; }
+.aca-end.fwd { justify-content: flex-end; }
+.aca-end::before, .aca-end.fwd::after { content: ""; border: 4px solid transparent; }
+.aca-end.back::before { border-left: 0; border-right: 6px solid currentColor; }
+.aca-end.fwd::before { display: none; }
+.aca-end.fwd::after { border-right: 0; border-left: 6px solid currentColor; }
 .aca .lbl { text-align: center; }
 .lever { display: grid; gap: 6px; justify-items: center; touch-action: none; outline: none; }
 .lever-track { position: relative; width: 56px; height: 148px; border-radius: 12px; background: linear-gradient(#202326, #191b1e); border: 1px solid #3a3f45; box-shadow: inset 0 2px 8px rgba(0, 0, 0, .6); cursor: ns-resize; }
