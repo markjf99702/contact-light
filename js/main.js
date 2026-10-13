@@ -58,8 +58,15 @@ function rodClick(d) {
   setTimeout(() => b.classList.remove('pressed'), 110);
 }
 for (const [id, d] of [['rodUp', 1], ['rodDown', -1]]) {
-  $(id).addEventListener('pointerdown', e => { e.preventDefault(); rodClick(d); });
-  $(id).addEventListener('click', e => { if (e.detail === 0) rodClick(d); }); // keyboard Enter/Space on the button
+  // A press counts as it goes down. Enter or Space on the focused button only clicks it, so a click
+  // counts too, unless it's the end of a press already counted (some browsers give those detail 0).
+  let pressed = -1e9;
+  $(id).addEventListener('pointerdown', e => { e.preventDefault(); pressed = performance.now(); rodClick(d); });
+  $(id).addEventListener('click', e => {
+    const endOfPress = performance.now() - pressed < 3000;
+    pressed = -1e9;
+    if (e.detail === 0 && !endOfPress) rodClick(d);
+  });
 }
 
 // The hand controller: where you hold it along its track is the tilt (or in Arcade, the turn rate).

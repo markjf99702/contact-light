@@ -140,7 +140,11 @@ try {
   // ---------- a hard landing ----------
   await page.evaluate(() => window.contactLight.fly('ellington'));
   await until(() => window.contactLight.state().screen === 'flight');
-  for (let k = 0; k < 14; k++) await page.tap('#rodDown');
+  // Fresh from a reload, a tap's click comes with detail 0, like a key press: it still counts once.
+  for (let k = 0; k < 3; k++) await page.tap('#rodDown');
+  await page.waitForTimeout(200);
+  assert.equal((await state()).rate, -3, 'three taps, three clicks');
+  for (let k = 0; k < 11; k++) await page.tap('#rodDown');
   await until(() => window.contactLight.state().rate <= -12);
   await page.evaluate(() => window.contactLight.speed(4));
   await until(() => window.contactLight.state().screen === 'result');
