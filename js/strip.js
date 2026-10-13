@@ -64,15 +64,8 @@ export function drawProfile(canvas, g, site, o = {}) {
     ctx.strokeStyle = 'rgba(140, 220, 255, .35)';
     ctx.strokeRect(a + 0.5, 0.5, Math.max(2, b - a) - 1, h - 1);
   }
-  // Crater names.
-  if (o.labels) {
-    ctx.font = '600 9px Jost, system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(236, 232, 223, .55)';
-    for (const l of g.labels) if (l.x > x0 + 30 && l.x < x1 - 30) ctx.fillText(l.name.toUpperCase(), X(l.x), Math.max(10, Y(g.h[Math.round(l.x - g.x0)] + 4) - 6));
-  }
-  // The target.
   const tx = X(site.target.x), ty = Y(g.h[Math.round(site.target.x - g.x0)]);
+  // The target.
   ctx.fillStyle = 'rgba(140, 220, 255, .95)';
   ctx.beginPath();
   ctx.moveTo(tx, ty - 9);
@@ -100,5 +93,37 @@ export function drawProfile(canvas, g, site, o = {}) {
     ctx.quadraticCurveTo(tx, py, tx, ty - 10);
     ctx.stroke();
     ctx.setLineDash([]);
+  }
+  // Crater names: over the crater, a row higher if the target's mark or another name is in the way,
+  // or beside the mark.
+  if (o.labels) {
+    ctx.font = '600 9px Jost, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(9, 10, 12, .9)';
+    ctx.fillStyle = 'rgba(236, 232, 223, .6)';
+    const taken = [[tx - 6, ty - 11, tx + 6, ty]];
+    const clear = (a, y, tw) => a >= 2 && a + tw <= w - 2 && y - 8 >= 0 &&
+      taken.every(([l, t, r, b]) => a + tw < l - 3 || a > r + 3 || y < t - 1 || y - 8 > b + 1);
+    for (const l of g.labels) {
+      if (l.x < x0 + 30 || l.x > x1 - 30) continue;
+      const text = l.name.toUpperCase(), tw = ctx.measureText(text).width;
+      const mid = X(l.x) - tw / 2;
+      // Just above the highest ground under the words.
+      const above = a => {
+        let top = h;
+        for (let p = a; p <= a + tw; p += 2) top = Math.min(top, Y(g.h[Math.round(x0 + (p - 4) / sx - g.x0)] ?? lo));
+        return top - 3;
+      };
+      const y0 = above(mid);
+      const spot = [[mid, y0], [mid, y0 - 11], [tx + 10, above(tx + 10)], [tx - 10 - tw, above(tx - 10 - tw)], [mid, y0 - 22]]
+        .find(([a, y]) => clear(a, y, tw));
+      if (!spot) continue;
+      const [a, y] = spot;
+      taken.push([a, y - 8, a + tw, y + 1]);
+      ctx.strokeText(text, a, y);
+      ctx.fillText(text, a, y);
+    }
   }
 }
