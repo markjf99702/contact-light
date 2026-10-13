@@ -15,7 +15,7 @@
 ## How it plays
 
 - **The rate switch** (▲ ▼, or the ↑ ↓ keys): each click changes the descent rate the computer holds by a foot per second. It starts wherever you were coming down when you took over, so the first thing to do is usually click it up a few times.
-- **The hand controller** (drag it, or hold ← →): drag back to tilt back and slow down, forward to speed up. Let go and the LM stands upright again and coasts. Two thumbs: one on the rate switch, one on the controller.
+- **The hand controller** (drag it, or hold ← →): left, toward BACK at that end of it, tilts the LM back and slows you down; right, toward FWD, speeds you up. Let go and the LM stands upright again and coasts. Two thumbs: one on the rate switch, one on the controller.
 - **The numbers** across the top are altitude, how fast you're coming down, speed along the ground and fuel. The strip under them is the whole site in profile, with you, the target and what the screen is showing. Below 100 feet, marks on the ground show where the footpads will come down, and the angle there: green is good, amber is rough, red is no. Moving too fast along the ground to stop before the footpads touch, FWD turns red and the marks say how fast instead.
 - **The dust.** Below about 100 feet the engine blasts the surface out sideways, grains racing off in every direction, and near the ground it hides the surface the way it did for the crews (Apollo 12 and 15 landed "on the gauges"). When the engine stops it's gone at once: nothing hangs in a vacuum. The LM's shadow, out ahead of you all the way down because the Sun is low behind you, slides back to meet the footpads.
 - **Fuel.** The low-level light comes on at 5.6%. Houston starts the clock: 94 seconds to Bingo, with calls at 60 and 30 seconds, and at Bingo you have 20 seconds to land or abort. Run dry or run out the clock up high and it's abort stage: the ascent stage leaves without you.
@@ -23,9 +23,10 @@
 - **Contact light** means one of the 67-inch probes under the footpads has touched. Hold steady: the engine stops when the footpads touch.
 - **Plaques.** Every touchdown number gets gold, silver or bronze: how fast you came down and along the ground, how upright you were, the slope you came to rest on, rocks under the footpads, distance from the target, and whether you were down before Houston's 30-second call. The plaque is the worst of them, so the table says exactly what to fly better. Past the LM's limits (10 ft/s down, less when you're moving along the ground; 4 ft/s along it; a 12° slope) it crashes or tips over, and the card names everything that went wrong. Each number is judged as the card shows it, to a tenth.
 - **The loop.** Each result keeps the radio from your landing, stamped the way the Apollo Lunar Surface Journal prints it: mission time from the moment that crew took over in P66. Fly Apollo 11 the way Armstrong did and your "Contact light" lands at 102:45:40 too; the card says when theirs came on.
-- **Training** at Ellington, in the jet-lifted LLTV every commander flew, teaches the controls one at a time, the rate switch and hand controller in P66 or the throttle and rotation in Arcade. It's marked Start here until you've landed there, and every briefing names the two controls in a line.
+- **Training** at Ellington, in the jet-lifted LLTV every commander flew, teaches the controls one at a time, the rate switch and hand controller in P66 or the throttle and rotation in Arcade: come down a little, stop and hold your height, fly over to the pad, stop over it, and only then come down. Do exactly what the hints say and you land on the pad; stop short, fly past or drift and they say which way to go, and low down they say what's going wrong first. It's marked Start here until you've landed there, and every briefing names the two controls in a line, and which way slows you down.
 - **Arcade** is the 1979 way: raw throttle and rotation and no computer holding you up. It keeps its own plaques. **Free flight** rolls new ground with something wrong at the target; the autopilot lands every roll before you get it, so it can be done.
 - **Read calls aloud** has the browser's own voice speak the radio, if it has one. Voices vary from phone to phone.
+- **Back** on a phone comes back from a briefing, a result or the pause menu to the list of sites, and pauses a flight.
 - No account and no server. Your plaques stay in your browser. It works offline and installs to a phone's home screen.
 
 ## The sites
@@ -68,6 +69,7 @@ To put it online with GitHub Pages: **Settings → Pages → Build and deploymen
 - `js/judge.js`: gold, silver or bronze for each touchdown number, and what went wrong if it didn't land.
 - `js/calls.js`: the radio: each crew's way of calling the numbers, Houston's calls and the real lines after touchdown.
 - `js/autopilot.js`: a steady pilot that flies through the same controls you do; the tests use it, the title flies it, and Free flight checks new ground with it.
+- `test/pilot.mjs`: someone doing exactly what the training's hints say, at a human pace; the tests fly both lessons with it and land on the pad.
 - `js/freeflight.js`: new ground from a number. `js/coach.js`: the hints at Ellington.
 - `js/render.js` and `js/craft.js`: drawing the scene and the LM and LLTV; `js/strip.js`: the site in profile; `js/plaque.js`: the plaques.
 - `js/sound.js`: every sound made in the browser with Web Audio, and the browser's voice. `js/store.js`: what's kept in localStorage (`contact-light.v1`).
