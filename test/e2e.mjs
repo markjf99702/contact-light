@@ -84,6 +84,7 @@ try {
   await touch('touchEnd', [[ax + ab.width / 2 - 8, ay]]);
   await until(() => window.contactLight.state().rate === -2);
   assert.ok((await state()).th > 15, 'still leaning while the other thumb works the rate switch');
+  await until(() => /^tilted forward (1[5-9]|20) degrees$/.test(document.getElementById('aca').getAttribute('aria-valuetext')));
   await touch('touchEnd', []);
   await until(() => Math.abs(window.contactLight.state().th) < 1);
   const vx = (await state()).vx;

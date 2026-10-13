@@ -155,6 +155,9 @@ function startFlight(site, m = mode) {
   $('rod').hidden = m === 'arcade';
   $('lever').hidden = m !== 'arcade';
   $('acaLbl').textContent = m === 'arcade' ? 'ROTATE' : 'HAND CONTROLLER';
+  $('aca').setAttribute('aria-label', m === 'arcade' ? 'Rotate: drag left or right to turn' : 'Hand controller: drag left or right to tilt');
+  $('aca').setAttribute('aria-valuemin', m === 'arcade' ? '-90' : '-20');
+  $('aca').setAttribute('aria-valuemax', m === 'arcade' ? '90' : '20');
   $('keys').textContent = m === 'arcade' ? '↑ ↓ throttle · ← → rotate · Esc menu' : '↑ ↓ rate · ← → tilt · Esc menu';
   store.flights++;
   if (site.free) store.free.flown++;
@@ -348,6 +351,7 @@ function draw(c, dt) {
   }
   if (c.mode === 'arcade') {
     setText('leverRead', `${Math.round(input.throttle * 100)}%`);
+    setAttr('lever', 'aria-valuenow', String(Math.round(input.throttle * 100)));
     $('leverKnob').style.bottom = `${input.throttle * (lever.clientHeight - 24)}px`;
     $('leverFill').style.height = `${Math.max(0, f.thr * (lever.clientHeight - 12))}px`;
   } else {
@@ -362,6 +366,8 @@ function draw(c, dt) {
   const lim = c.mode === 'arcade' ? 90 : 20;
   $('acaNeedle').style.transform = `translateX(${Math.max(-1, Math.min(1, tilt / lim)) * (track.clientWidth / 2 - 10)}px)`;
   setText('acaRead', Math.abs(tilt) < 0.5 ? 'UPRIGHT' : tilt < 0 ? `← ${Math.round(-tilt)}°` : `${Math.round(tilt)}° →`);
+  setAttr('aca', 'aria-valuenow', String(Math.max(-lim, Math.min(lim, Math.round(tilt)))));
+  setAttr('aca', 'aria-valuetext', Math.abs(tilt) < 0.5 ? 'upright' : `tilted ${tilt < 0 ? 'back' : 'forward'} ${Math.round(Math.abs(tilt))} degrees`);
   // Sound.
   sound.engine(fly && screen === 'flight' ? f.thr : 0);
   c.jetT -= dt;
@@ -384,6 +390,7 @@ function draw(c, dt) {
 
 const texts = {};
 function setText(id, t) { if (texts[id] !== t) { texts[id] = t; $(id).textContent = t; } }
+function setAttr(id, name, v) { const k = `${id} ${name}`; if (texts[k] !== v) { texts[k] = v; $(id).setAttribute(name, v); } }
 // A monospaced point takes a whole digit's room; pull it in so 14.0 doesn't read as 14. 0.
 function setNum(id, t) {
   if (texts[id] === t) return;
