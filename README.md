@@ -13,7 +13,8 @@
 - **Fuel.** The low-level light comes on at 5.6%. Houston starts the clock: 94 seconds to Bingo, with calls at 60 and 30 seconds, and at Bingo you have 20 seconds to land or abort. Run dry or run out the clock up high and it's abort stage: the ascent stage leaves without you.
 - **Contact light** means one of the 67-inch probes under the footpads has touched. Hold steady: the engine stops when the footpads touch.
 - **Plaques.** Every touchdown number gets gold, silver or bronze: how fast you came down and sideways, how upright you were, the slope you came to rest on, rocks under the footpads, distance from the target, and whether you were down before Houston's 30-second call. The plaque is the worst of them, so the table says exactly what to fly better. Past the LM's limits (10 ft/s down, less when you're moving sideways; 4 ft/s sideways; a 12° slope) it crashes or tips over.
-- **Training** at Ellington, in the jet-lifted LLTV every commander flew, teaches the controls one at a time.
+- **The loop.** Each result keeps the radio from your landing, stamped the way the Apollo Lunar Surface Journal prints it: mission time from the moment that crew took over in P66. Fly Apollo 11 the way Armstrong did and your "Contact light" lands at 102:45:40 too; the card says when theirs came on.
+- **Training** at Ellington, in the jet-lifted LLTV every commander flew, teaches the controls one at a time. It's marked Start here on a first visit.
 - **Arcade** is the 1979 way: raw throttle and rotation and no computer holding you up. It keeps its own plaques. **Free flight** rolls new ground with something wrong at the target; the autopilot lands every roll before you get it, so it can be done.
 - **Read calls aloud** has the browser's own voice speak the radio, if it has one. Voices vary from phone to phone.
 - No account and no server. Your plaques stay in your browser. It works offline and installs to a phone's home screen.
