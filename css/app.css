@@ -67,7 +67,7 @@ button { font: inherit; color: inherit; }
   text-shadow: 0 0 10px rgba(150, 255, 120, .35); white-space: nowrap;
 }
 .ro .unit { font: 500 10px/1 var(--disp); color: var(--ink3); letter-spacing: .08em; }
-.ro b .dot { margin: 0 -.16em 0 -.12em; }
+.ro b .dot { margin: 0 -.27em 0 -.03em; }
 .ro b.warn { color: var(--amber); text-shadow: 0 0 10px rgba(255, 179, 64, .45); }
 .ro b.bad { color: #ff7a5c; text-shadow: 0 0 10px rgba(255, 110, 80, .5); }
 .strip { display: block; width: 100%; height: 28px; margin-top: 6px; border-radius: 6px; }
