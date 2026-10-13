@@ -1,6 +1,9 @@
 // The parts that don't need a browser:  node --test test/unit.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile, readdir } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { rng } from '../js/rng.js';
 import { buildGround, groundAt, surfaceAt, spotAt, litAt } from '../js/terrain.js';
 import { createFlight, step, altitude, pct, hoverSeconds, G_MOON, VEHICLES, ENGINE, LOW_LEVEL, BINGO_AFTER_LOW, FULL_LOAD } from '../js/sim.js';
@@ -12,6 +15,7 @@ import { makeFreeSite } from '../js/freeflight.js';
 import { clean, recordLanding, quality } from '../js/store.js';
 import { STEPS } from '../js/coach.js';
 
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DT = 1 / 60;
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} is not within ${tol} of ${b}`);
 
@@ -330,4 +334,15 @@ test('every site has what the game needs', () => {
   }
   assert.equal(SITES.filter(s => !s.training).map(s => s.name).join(', '), 'Apollo 11, Apollo 12, Apollo 14, Apollo 15, Apollo 16, Apollo 17');
   assert.equal(STEPS.length, 5);
+});
+
+test('the offline copy lists every file the page uses', async () => {
+  const sw = await readFile(join(root, 'sw.js'), 'utf8');
+  const shell = sw.slice(sw.indexOf('const SHELL = ['), sw.indexOf('];'));
+  const listed = new Set([...shell.matchAll(/'([^']+)'/g)].map(m => m[1]));
+  const files = ['index.html', 'manifest.webmanifest', 'icon.svg', 'css/app.css'];
+  for (const dir of ['js', 'fonts']) for (const f of await readdir(join(root, dir))) files.push(`${dir}/${f}`);
+  for (const f of files) assert.ok(listed.has(f), `sw.js is missing ${f}`);
+  for (const f of listed) if (f !== './') await readFile(join(root, f));
+  assert.match(sw, /const CACHE = 'contact-light-v\d+'/);
 });

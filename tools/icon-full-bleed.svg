@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#05070b"/>
+      <stop offset="1" stop-color="#161c26"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bdb7ac"/>
+      <stop offset="1" stop-color="#6c6861"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6dc8e"/>
+      <stop offset="1" stop-color="#b0832f"/>
+    </linearGradient>
+    <linearGradient id="cab" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9fa29f"/>
+      <stop offset=".55" stop-color="#e2e3de"/>
+      <stop offset="1" stop-color="#8c8f8c"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#e2f4ff"/>
+      <stop offset=".35" stop-color="#55baff" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#55baff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" fill="url(#sky)"/>
+  <path d="M0 46.5 Q32 43 64 46.5 V64 H0 Z" fill="url(#ground)"/>
+  <ellipse cx="14" cy="55" rx="5" ry="1.4" fill="#57534d"/>
+  <ellipse cx="49" cy="58" rx="6" ry="1.6" fill="#57534d"/>
+  <g transform="translate(32 33) scale(.78) translate(-32 -33)">
+    <ellipse cx="32" cy="45.6" rx="25" ry="5.2" fill="url(#glow)"/>
+    <g stroke-linecap="round" stroke-linejoin="round">
+      <path d="M23.5 33 L13.5 44.6 M40.5 33 L50.5 44.6 M24 37 L16.5 43.4 M40 37 L47.5 43.4" stroke="#d8c48e" stroke-width="1.7"/>
+      <path d="M32 38.5 V44.6" stroke="#e8dcc0" stroke-width="2"/>
+      <path d="M29.2 38 L28 41.6 H36 L34.8 38 Z" fill="#3b3732"/>
+      <rect x="22.5" y="29.4" width="19" height="8.8" rx="0.6" fill="url(#gold)"/>
+      <rect x="22.5" y="29.4" width="19" height="1.5" fill="#22201c"/>
+      <path d="M25.2 29.4 L24 22.4 L27.4 18.8 H35.4 L39.6 21.8 L40 29.4 Z" fill="url(#cab)"/>
+      <path d="M35.6 21.6 L39.4 22.6 L39.6 27 L35.6 26.2 Z" fill="#1b1d20"/>
+      <path d="M36.5 22.8 L38.7 23.4 L38.8 25.4 Z" fill="#5b7891"/>
+      <rect x="30" y="16.6" width="4" height="2.4" fill="#c9cac5"/>
+      <path d="M11.4 45 H15.8 M48.2 45 H52.6 M29.8 45 H34.2" stroke="#efe9d8" stroke-width="1.6"/>
+    </g>
+  </g>
+</svg>
