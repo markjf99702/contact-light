@@ -47,7 +47,7 @@ const STYLES = {
     const a = altText(n.alt), r = rateText(n.rate);
     if (n.rate > 0.25) return `${a} feet; you're climbing, Pete.`;
     if (Math.abs(n.rate) <= 0.25) return `${a} feet, holding.`;
-    return [`${a} feet, coming down at ${r}.`, `${a} feet; coming down at ${r}. You're looking good.`, `${a}, coming down at ${r}.`][n.k % 3];
+    return [`${a} feet, coming down at ${r}.`, `Coming down at ${r}; ${a} feet.`, `${a}, coming down at ${r}.`][n.k % 3];
   },
   mitchell(n) {
     const a = altText(n.alt), r = rateText(n.rate);
@@ -131,12 +131,13 @@ const LINES = {
     aldrin: 'Drifting back a little.',
     plain: 'Drifting back a little.',
   },
+  // Only said when it's true: see steady() below. Schmitt's is about the fuel, so not after the light.
   good: {
     aldrin: 'You’re looking good.',
     bean: 'Looking good; watch the dust.',
     mitchell: 'Going down; looking great.',
     duke: 'Looking super.',
-    schmitt: 'Fuel’s good.',
+    schmitt: { text: 'Fuel’s good.', fuel: true },
     plain: 'Looking good.',
   },
   contact: {
@@ -161,15 +162,37 @@ function eventLine(kind, style, people) {
   return { ...v };
 }
 
+// The fuel gauge read out, cheerful only while there's plenty.
 const FUEL_CALL = {
   aldrin: p => `${p} percent.`,
   bean: p => (p >= 9 ? `You got ${p} percent. Got loads of gas.` : `${p} percent.`),
-  mitchell: p => `${p} percent fuel; looks great.`,
+  mitchell: p => (p >= 8 ? `${p} percent fuel; looks great.` : `${p} percent fuel.`),
   irwin: p => `${p} percent fuel.`,
-  duke: p => (p >= 8 ? `Fuel is good: ${p} percent.` : `${p} percent. Plenty fat.`),
-  schmitt: () => 'The fuel’s good.',
+  duke: p => (p >= 8 ? `Fuel is good: ${p} percent.` : p >= 7 ? `${p} percent. Plenty fat.` : `${p} percent.`),
+  schmitt: p => (p >= 8 ? 'The fuel’s good.' : `${p} percent.`),
   plain: p => `${p} percent fuel.`,
 };
+
+// Moving along the ground faster than you could stop before the footpads touch. s: speed, d: 'forward' or 'back'.
+const SLOW_IT = {
+  aldrin: (s, d) => `${s} ${d}. Slow it down.`,
+  bean: (s, d, p) => `${s} ${d}, ${p.first}. Slow it down.`,
+  mitchell: (s, d, p) => `${s} feet per second ${d}, ${p.first}. Slow it down.`,
+  irwin: (s, d) => `${d === 'back' ? 'Back' : 'Forward'} ${s}. Slow it down.`,
+  duke: (s, d, p) => `${s} ${d}, ${p.first}. Slow it down.`,
+  schmitt: (s, d) => `${s} ${d}, Geno. Slow it down.`,
+  plain: (s, d) => `${s} ${d}. Slow it down.`,
+};
+
+// Going well enough to say so: coming down gently and nearly stopped along the ground.
+export const steady = st => st.rate >= -4.2 && st.rate <= 0.3 && Math.abs(st.fwd) <= 2;
+// Too fast along the ground to stop before the footpads touch at this descent rate, even leaning
+// all the way back (20° of tilt slows you 1.9 ft/s every second).
+export function tooFastAlong(st) {
+  const v = Math.abs(st.fwd);
+  if (st.alt > 200 || st.alt < 6 || v < 3) return false;
+  return (v - 1) / 1.9 > st.alt / Math.max(0.5, -st.rate);
+}
 
 // ---------- the radio itself ----------
 
@@ -185,6 +208,9 @@ export function createRadio(site) {
     lastFuel: Math.floor(site.fuel),
     highSince: null,
     lastEventAt: -99,
+    goodAt: null, // a 'looking good' waiting for its moment, if it's still true then
+    alongAt: -99, alongN: 0, // the calls to slow down along the ground
+    driftT: null, driftDir: 0, driftAt: -99,
   };
 }
 
@@ -239,16 +265,17 @@ export function radioUpdate(radio, f, events, state) {
   }
   if (f.phase !== 'flying') return out;
 
-  // Event calls, once each.
-  if (state.dustOn && !radio.said.dust && st !== 'coach') ev('dust');
-  if (state.thickDust && !radio.said.thickDust) ev('thickDust');
+  // Event calls, once each. The tower at Ellington doesn't talk about the dust or your shadow.
+  const site = radio.site, tower = !!site.training;
+  if (state.dustOn && !radio.said.dust && !tower) ev('dust');
+  if (state.thickDust && !radio.said.thickDust && !tower) ev('thickDust');
   // The LM's shadow shows up out ahead well before it reaches the footpads.
-  if (!radio.said.shadow && state.alt < 240 && state.alt > 90 && state.t > 10) ev('shadow');
+  if (!radio.said.shadow && state.alt < 240 && state.alt > 90 && state.t > 10 && !tower) ev('shadow');
   if (Math.abs(state.fwd) > 45 && state.t > 8 && !radio.said.pegged && st === 'aldrin') ev('pegged');
 
   // Fuel percent, as the gauges show it, every couple of percent until the light.
   const pf = Math.floor(state.pct);
-  if (pf < radio.lastFuel && f.lowAt == null && pf >= 6 && state.t > 5 && !radio.site.training) {
+  if (pf < radio.lastFuel && f.lowAt == null && pf >= 6 && state.t > 5 && !tower) {
     radio.lastFuel = pf;
     if (pf % 2 === 0 || st === 'bean' || st === 'irwin') push(line(radio, 'lmp', (FUEL_CALL[st] || FUEL_CALL.plain)(pctText(state.pct))));
   }
@@ -259,11 +286,46 @@ export function radioUpdate(radio, f, events, state) {
     if (state.t - radio.highSince > 9 && !radio.said.high) ev('high');
   } else radio.highSince = null;
   if (state.alt < 110 && state.alt > 15 && state.rate < -7.5 && !radio.said.fast) ev('fast');
+  if (state.alt < 45 && state.alt > 6 && state.rate < -6 && !radio.said.fastLow) {
+    radio.said.fastLow = true;
+    push(line(radio, 'lmp', `Down at ${rateText(state.rate)}. Too fast; ${f.mode === 'arcade' ? 'more throttle' : 'click it up'}!`));
+  }
 
-  // Low and nearly stopped: the gentle drifts.
-  if (state.alt < 70 && state.alt > 8) {
-    if (state.fwd > 0.6 && state.fwd < 2.5 && !radio.said.driftFwd) ev('driftFwd');
-    if (state.fwd < -0.6 && !radio.said.driftBack) ev('driftBack');
+  // Still going fast along the ground near the bottom: say so, with the number, until it's fixed.
+  if (tooFastAlong(state) && state.t - radio.alongAt > 7 && radio.alongN < 3) {
+    radio.alongAt = state.t;
+    radio.alongN++;
+    push(line(radio, 'lmp', (SLOW_IT[st] || SLOW_IT.plain)(Math.round(Math.abs(state.fwd)), state.fwd < 0 ? 'back' : 'forward', P)));
+  }
+  // Flying on past the target and away from it.
+  const past = (f.x - site.target.x) * Math.sign(state.fwd);
+  if (!radio.said.long && state.t > 8 && Math.abs(state.fwd) > 8 && past > site.target.tiers[1]) {
+    radio.said.long = true;
+    const word = site.target.label === 'SURVEYOR 3' ? 'Surveyor’s' : site.target.label === 'PAD' ? 'The pad’s' : 'The target’s';
+    const back = (Math.round(Math.abs(f.x - site.target.x) / 100) * 100).toLocaleString('en-US');
+    push(line(radio, 'lmp', `${tower ? 'You’re' : 'We’re'} long. ${word} ${back} feet back.`));
+  }
+
+  // Low and nearly stopped: the gentle drifts, once each, and only when the drift has lasted a
+  // moment and the other one wasn't just called.
+  if (state.alt < 70 && state.alt > 8 && state.rate > -5) {
+    const dir = state.fwd > 0.6 && state.fwd < 2.5 ? 1 : state.fwd < -0.6 && state.fwd > -2.5 ? -1 : 0;
+    if (dir !== radio.driftDir) { radio.driftDir = dir; radio.driftT = dir ? state.t : null; }
+    const kind = dir > 0 ? 'driftFwd' : 'driftBack';
+    if (dir && state.t - radio.driftT > 1.2 && state.t - radio.driftAt > 8 && !radio.said[kind]) {
+      radio.driftAt = state.t;
+      ev(kind);
+    }
+  } else { radio.driftDir = 0; radio.driftT = null; }
+
+  // 'Looking good', a moment after the numbers that earned it, if they still do.
+  if (radio.goodAt != null && state.t >= radio.goodAt) {
+    radio.goodAt = null;
+    const g = eventLine('good', st, P);
+    if (g && steady(state) && state.alt > 8 && !radio.said.good && !radio.said.contact && (!g.fuel || f.lowAt == null)) {
+      radio.said.good = true;
+      push(line(radio, 'lmp', g.text));
+    }
   }
 
   // The steady numbers.
@@ -272,7 +334,7 @@ export function radioUpdate(radio, f, events, state) {
     else {
       const text = numbersCall(st, { alt: state.alt, rate: state.rate, fwd: state.fwd, k: radio.k++ });
       out.push(line(radio, 'lmp', text, { numbers: true }));
-      if (state.alt < 60 && radio.k % 3 === 0 && !radio.said.good) { radio.said.good = true; const g = eventLine('good', st, P); if (g) out.push({ ...line(radio, 'lmp', g.text), at: 1.4 }); }
+      if (state.alt < 60 && state.alt > 12 && steady(state) && !radio.said.good) radio.goodAt = state.t + 1.4;
       radio.next = state.t + (state.alt > 250 ? 6.5 : state.alt > 100 ? 5.5 : 4.2);
     }
   }

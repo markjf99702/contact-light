@@ -308,6 +308,65 @@ test('the radio makes its calls once, in Houston\'s and the crew\'s voices', () 
   assert.match(openingLines(site)[0].text, /Eagle, Houston\. You’re go for landing/);
 });
 
+// Flies a site and runs the radio the way the page does, keeping every line with the numbers at that moment.
+function radioFlight(site, pilot, mode = 'p66') {
+  const g = buildGround({ ...site.ground, sun: site.sun });
+  const f = createFlight(site, g, mode);
+  const ap = createAutopilot(site, g, f.veh, mode);
+  const radio = createRadio(site);
+  const lines = [];
+  let end = null;
+  while (f.t < 300 && (end == null || f.t < end + 3)) {
+    const ev = step(f, pilot === 'auto' ? autopilotInput(ap, f) : pilot(f), DT);
+    const alt = altitude(f);
+    const st = { alt, rate: f.vy, fwd: f.vx, pct: pct(f), t: f.t, dustOn: alt < site.dust.top * 0.8, thickDust: false, shadowSeen: alt < 240 };
+    for (const l of radioUpdate(radio, f, ev, st)) lines.push({ ...l, t: f.t, alt, rate: f.vy, fwd: f.vx, contact: f.contactAt != null, low: f.lowAt != null });
+    if (end == null && ev.some(e => e.type === 'touchdown' || e.type === 'abort')) end = f.t;
+  }
+  return lines;
+}
+const GOOD = ['You’re looking good.', 'Looking good; watch the dust.', 'Going down; looking great.', 'Looking super.', 'Fuel’s good.', 'Looking good.'];
+
+test('the radio warns a landing that is going wrong instead of cheering it', () => {
+  const a11 = siteById('a11');
+  // Take over and touch nothing: 14 ft/s down and 58 forward all the way into the ground.
+  const nothing = radioFlight(a11, () => ({ pad: 0 }));
+  assert.ok(!nothing.some(l => /good|great|super/i.test(l.text)), nothing.filter(l => /good/i.test(l.text)).map(l => l.text).join(' / '));
+  assert.ok(nothing.some(l => l.text === '58 forward. Slow it down.'), 'told to slow down along the ground');
+  assert.ok(nothing.some(l => /Too fast; click it up!/.test(l.text)), 'told the descent is too fast');
+  // Set the rate to 4 down and never steer: flies on far past the target.
+  let k = 0;
+  const drifting = radioFlight(a11, f => (f.rateCmd < -4 && k++ % 10 === 0 ? { rod: 1 } : { pad: 0 }));
+  assert.ok(!drifting.some(l => GOOD.includes(l.text)));
+  assert.ok(drifting.some(l => /^We’re long\. The target’s [\d,]+ feet back\.$/.test(l.text)), 'told it is long');
+  assert.ok(drifting.filter(l => /Slow it down/.test(l.text)).length >= 2, 'and told again lower down');
+  // Bean's numbers never come with a "looking good" attached.
+  for (const n of [{ alt: 40, rate: -14, fwd: 58 }, { alt: 30, rate: -2, fwd: 0 }]) for (let j = 0; j < 3; j++) assert.doesNotMatch(numbersCall('bean', { ...n, k: j }), /good/i);
+});
+
+test('praise on the radio is only ever true when it is said', () => {
+  for (const site of SITES) {
+    const lines = radioFlight(site, 'auto');
+    for (const l of lines.filter(x => GOOD.includes(x.text))) {
+      assert.ok(l.rate >= -4.2 && Math.abs(l.fwd) <= 2 && !l.contact, `${site.id} at ${l.alt.toFixed(0)} ft: "${l.text}" while ${l.rate.toFixed(1)} down, ${l.fwd.toFixed(1)} along`);
+      if (l.text === 'Fuel’s good.') assert.ok(!l.low, `${site.id}: fuel's good after the low-level light`);
+    }
+    // The two drift calls never come one straight after the other.
+    const drifts = lines.filter(l => /^Drifting|backing up|Moving forward a little/.test(l.text)).map(l => l.t);
+    for (let j = 1; j < drifts.length; j++) assert.ok(drifts[j] - drifts[j - 1] >= 8, `${site.id}: drift calls ${drifts[j - 1].toFixed(1)} and ${drifts[j].toFixed(1)} s`);
+    // The tower at Ellington doesn't talk about the dust or our shadow.
+    if (site.training) assert.ok(!lines.some(l => /dust|shadow/i.test(l.text)), lines.map(l => l.text).join(' / '));
+  }
+  // A "looking good" waiting its moment isn't said once the probes have touched.
+  const site = siteById('a11'), radio = createRadio(site), f = createFlight(site, flatGround(site));
+  const st = (t, o = {}) => ({ alt: 40, rate: -2, fwd: 0.5, pct: 7, t, dustOn: true, thickDust: true, shadowSeen: false, ...o });
+  radio.next = 0;
+  radio.said.dust = radio.said.thickDust = radio.said.shadow = radio.said.pegged = true;
+  assert.ok(radioUpdate(radio, f, [], st(10)).some(l => l.numbers), 'the numbers');
+  radioUpdate(radio, f, [{ type: 'contact' }], st(10.6, { alt: 9.5 }));
+  assert.deepEqual(radioUpdate(radio, f, [], st(11.6, { alt: 9 })).map(l => l.text), [], 'nothing after contact');
+});
+
 test('the loop is stamped in each mission\'s own clock', () => {
   // Armstrong took over in P66 at 102:43:22; Eagle's contact light came on at 102:45:40.
   assert.equal(missionTime(siteById('a11'), 0), '102:43:22');
