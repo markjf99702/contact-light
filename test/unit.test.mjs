@@ -220,6 +220,8 @@ test('past the LM\'s limits it crashes or tips over', () => {
   assert.equal(at({ down: 9, side: 3 }).outcome, 'crash');
   assert.match(at({ down: 9, side: 3 }).reason, /built for 7\.8 like that/);
   assert.match(at({ down: 14 }).reason, /14 ft\/s down\. The legs were built for 10/);
+  // Too fast even coming straight down: a small drift along the ground isn't part of the story.
+  assert.equal(at({ down: 14, side: 1, fwd: 1 }).reason, '14 ft/s down. The legs were built for 10.');
   assert.equal(at({ side: 4.5 }).outcome, 'tipped');
   assert.equal(at({ tilt: 13 }).outcome, 'tipped');
   assert.equal(at({ rest: 13 }).outcome, 'tipped');

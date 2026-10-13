@@ -82,7 +82,8 @@ export function judge(rec, site) {
     tip = 'Keep well above the crater walls and boulders until you are over your spot, then come straight down.';
   } else if (down > legs) {
     outcome = 'crash'; title = 'Hard landing';
-    if (side < 0.5) reason = `${one(down)} ft/s down. The legs were built for 10.`;
+    // Too fast even straight down: the drift along the ground isn't what did it, so it isn't mentioned.
+    if (side < 0.5 || (down > LIMITS.down[2] && side <= LIMITS.side[2])) reason = `${one(down)} ft/s down. The legs were built for 10.`;
     else if (side > LIMITS.side[2]) reason = `${one(down)} ft/s down while moving ${one(side)} ft/s ${along}. The legs were built for 10 coming straight down, and no more than ${LIMITS.side[2]} ft/s along the ground.`;
     else reason = `${one(down)} ft/s down while moving ${one(side)} ft/s ${along}. The legs were built for ${one(legs)} like that, and 10 coming straight down.`;
     tip = side > LIMITS.side[2] ? `${slowDown} And ${stop}.` : slowDown;
