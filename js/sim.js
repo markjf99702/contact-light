@@ -253,7 +253,7 @@ function crash(f) {
   f.phase = 'crashed';
   f.thr = 0;
   f.end = { t: 0, from: { y: f.y, th: f.th, x: f.x } };
-  f.crashTh = f.th + (f.vx >= 0 ? 1 : -1) * (0.2 + Math.min(0.5, Math.abs(f.vx) / 30));
+  f.crashTh = f.th + (f.vx >= 0 ? 1 : -1) * (0.16 + Math.min(0.35, Math.abs(f.vx) / 40));
 }
 
 function abort(f, ev, why) {
@@ -292,9 +292,10 @@ function afterwards(f, dt, ev) {
     f.y = groundAt(f.g, f.x) + f.veh.cg * (0.95 - 0.55 * s) + 2;
     if (k >= 1 && !f.said.over) { f.said.over = true; ev.push({ type: 'over' }); }
   } else if (f.phase === 'crashed') {
+    // The legs fold and it slumps over onto what's left of them.
     const k = Math.min(1, e.t / 0.5), s = 1 - Math.pow(1 - k, 2);
     f.th = e.from.th + (f.crashTh - e.from.th) * s;
-    f.y = e.from.y + (groundAt(f.g, f.x) + f.veh.cg * 0.55 - e.from.y) * s;
+    f.y = e.from.y + (groundAt(f.g, f.x) + f.veh.cg * 0.78 - e.from.y) * s;
     if (k >= 1 && !f.said.over) { f.said.over = true; ev.push({ type: 'over' }); }
   } else if (f.phase === 'abort') {
     // The descent stage falls; the ascent stage climbs away on its own engine (3,500 lbf).

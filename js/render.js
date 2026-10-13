@@ -721,7 +721,7 @@ function lmShadow(r, sc) {
   r.shadowSeen = X(near) > 0 && X(near) < r.W;
   if (X(near) > r.W + 10 || X(far) < -10) return;
   // A dark patch on the ground along the track, deepest near the end the footpads cast.
-  const a = 0.7;
+  const a = sc.site.world === 'earth' ? 0.32 : 0.7; // grass under a high Texas Sun casts a softer shadow
   const gr = ctx.createLinearGradient(X(near), 0, X(far), 0);
   gr.addColorStop(0, 'rgba(0,0,0,0)');
   gr.addColorStop(Math.min(0.12, 6 / Math.max(1, X(far) - X(near))), `rgba(0,0,0,${a})`);
@@ -884,11 +884,12 @@ function particles(r, sc) {
 }
 
 // Bits of foil and metal when it all goes wrong.
-export function burst(r, f, n = 46) {
-  const cols = ['#d8b058', '#1c1a17', '#c9ccc9', '#a97d2f', '#f3d98a'];
+export function burst(r, f, n = 40) {
+  const cols = f.veh.id === 'lltv' ? ['#e9eae5', '#9a9e98', '#d0582c', '#c7c9c4'] : ['#d8b058', '#1c1a17', '#c9ccc9', '#a97d2f', '#f3d98a'];
   for (let k = 0; k < n; k++) {
-    const a = Math.random() * Math.PI, sp = 8 + Math.random() * 30;
-    r.debris.push({ x: f.x + (Math.random() - 0.5) * 10, y: f.y - f.veh.cg + 4, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, c: cols[k % cols.length] });
+    // Thrown gently: in Moon gravity anything faster stays up for many seconds.
+    const a = 0.25 + Math.random() * (Math.PI - 0.5), sp = 4 + Math.random() * 14;
+    r.debris.push({ x: f.x + (Math.random() - 0.5) * 12, y: f.y - f.veh.cg + 3, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, c: cols[k % cols.length] });
   }
   r.shake = 10;
 }

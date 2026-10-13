@@ -116,9 +116,9 @@ addEventListener('blur', () => held.keys.clear());
 function keyInput(dt) {
   const left = held.keys.has('left') || held.keys.has('a'), right = held.keys.has('right') || held.keys.has('d');
   const want = left && !right ? -1 : right && !left ? 1 : 0;
-  if (want) keyTilt = Math.max(-1, Math.min(1, keyTilt + want * dt * 1.6));
-  else keyTilt = 0;
-  if (held.pad == null && (want || keyTilt === 0)) setPad(keyTilt);
+  if (!want && !keyTilt) return; // keys not in use: leave the controller to the touch pad
+  keyTilt = want ? Math.max(-1, Math.min(1, keyTilt + want * dt * 1.6)) : 0;
+  if (held.pad == null) setPad(keyTilt);
 }
 
 // ---------- flights ----------
@@ -322,6 +322,7 @@ function draw(c, dt) {
   const f = c.f;
   const alt = Math.max(0, altitude(f));
   const fly = f.phase === 'flying';
+  if (f.phase === 'abort') return; // the numbers stay as they were when it staged
   setNum('roAlt', alt >= 10 ? String(Math.round(alt)) : alt.toFixed(1));
   const vy = fly ? f.vy : 0, vx = fly ? f.vx : 0;
   setText('roRateLbl', vy > 0.05 ? 'UP' : 'DOWN');
@@ -606,4 +607,5 @@ window.contactLight = {
   fly(id, m = 'p66') { startFlight(siteById(id), m); },
   demo() { return demo && { site: demo.site.id, phase: demo.f.phase }; },
   drawing() { return r.key; },
+  hold(o) { Object.assign(input, o); }, // set the controls directly: { pad, throttle, rotate }
 };
