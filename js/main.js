@@ -547,10 +547,13 @@ function showResult() {
   $('loopList').replaceChildren(...c.log.map(l => {
     const li = document.createElement('li');
     const time = document.createElement('span');
+    time.className = 'when';
     time.textContent = missionTime(s, l.t);
+    const said = document.createElement('span');
     const who = document.createElement('b');
     who.textContent = `${l.who}:`;
-    li.append(time, who, document.createTextNode(` ${l.text}`));
+    said.append(who, ` ${l.text}`);
+    li.append(time, said);
     return li;
   }));
   $('loop').hidden = !c.log.length;
