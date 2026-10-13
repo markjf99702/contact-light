@@ -1,15 +1,17 @@
 // Renders the README screenshots (docs/phone-*.png) and the link preview (og.png):  node tools/screenshots.mjs
 // Math.random is seeded and the autopilot flies, so the pictures come out much the same every time.
+// Needs Playwright, and upng-js from `npm install`.
 import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require('playwright'); } catch { pw = require(join(execSync('npm root -g').toString().trim(), 'playwright')); }
+const UPNG = require('upng-js');
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json', '.json': 'application/json' };
 const server = createServer(async (req, res) => {
@@ -24,6 +26,14 @@ const SEED = 7;
 const LONG = { timeout: 120000 };
 const browser = await pw.chromium.launch();
 await mkdir(join(root, 'docs'), { recursive: true });
+
+// Saves a screenshot with fewer colours, which keeps the dust and the cratered ground a fraction of the
+// size. The README shows its pictures at a third of their size, where 256 colours look the same as all of
+// them; the link preview is seen full size, and needs about a thousand to keep the lamp's glow smooth.
+async function save(page, path, colours) {
+  const img = UPNG.decode(await page.screenshot());
+  await writeFile(join(root, path), Buffer.from(UPNG.encode(UPNG.toRGBA8(img), img.width, img.height, colours)));
+}
 
 async function open(viewport, deviceScaleFactor, phone = false) {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor, isMobile: phone, hasTouch: true, serviceWorkers: 'block' });
@@ -51,16 +61,16 @@ async function flyTo(page, id, test, speed = 4) {
   const page = await open({ width: 390, height: 844 }, 2, true);
   await flyTo(page, 'a11', () => { const s = window.contactLight.state(); return s.alt < 30 && Math.abs(s.vx) < 0.5; });
   await page.waitForTimeout(700); // the dust fills in
-  await page.screenshot({ path: join(root, 'docs/phone-flight.png') });
+  await save(page, 'docs/phone-flight.png', 256);
   await page.evaluate(() => window.contactLight.speed(3));
   await page.waitForFunction(() => !document.getElementById('moment').hidden, null, LONG);
   await page.evaluate(() => window.contactLight.speed(0));
   await page.waitForTimeout(1400); // the line fades in
-  await page.screenshot({ path: join(root, 'docs/phone-landed.png') });
+  await save(page, 'docs/phone-landed.png', 256);
   await page.evaluate(() => window.contactLight.speed(6));
   await page.waitForFunction(() => window.contactLight.state().screen === 'result', null, LONG);
   await page.waitForTimeout(500);
-  await page.screenshot({ path: join(root, 'docs/phone-plaque.png') });
+  await save(page, 'docs/phone-plaque.png', 256);
   await page.context().close();
 }
 
@@ -102,7 +112,7 @@ async function flyTo(page, id, test, speed = 4) {
     </div>
   </body></html>`);
   await page.evaluate(() => document.fonts.ready);
-  await page.screenshot({ path: join(root, 'og.png') });
+  await save(page, 'og.png', 1024);
   await page.close();
 }
 
