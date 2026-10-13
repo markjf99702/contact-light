@@ -2,7 +2,7 @@
 
 **Play it: [contact-light.junkdrawer.works](https://contact-light.junkdrawer.works/)**
 
-**Land on the Moon the way the Apollo commanders did: a foot per second at a time.** Each landing starts at low gate, about 500 feet up and still moving forward, and something is wrong with the spot the computer picked: the boulders round West crater, the middle of Surveyor crater, a slope at Hadley. You take over in P66, the program every crew landed in. The computer holds whatever descent rate you click, you tilt the LM to slow down or fly on, and the LM pilot calls your numbers the way Aldrin did ("40 feet, down 2 1/2. Picking up some dust.") while Houston counts down the fuel. Then the probes touch, the blue lunar contact lamp comes on, and you hear the real words from that landing.
+**Land on the Moon the way the Apollo commanders did: a foot per second at a time.** Each landing starts at low gate, about 500 feet up and still moving forward, and something is wrong with the spot the computer picked: the boulders round West crater, the middle of Surveyor crater, a slope at Hadley. You take over in P66, the program every crew landed in. The computer holds whatever descent rate you click, you tilt the LM to slow down or fly on, and the LM pilot calls your numbers the way Aldrin did ("40 feet, down 2 1/2. Picking up some dust.") while Houston counts down the fuel. Then the probes touch, the blue lunar contact lamp comes on, and you hear the real words from that landing, with the big one ("The Eagle has landed.") written large across the sky above you.
 
 ## How it plays
 

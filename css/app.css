@@ -79,7 +79,7 @@ button { font: inherit; color: inherit; }
 .radio p.capcom b { color: var(--cyan); }
 .radio p.big { color: #fff; }
 /* A comma, colon, point or apostrophe takes a whole cell in B612 Mono, with its ink at the left. */
-.radio .pn, .clock .pn { margin: 0 -.32em 0 -.04em; }
+.radio .pn, .clock .pn, .moment .pn { margin: 0 -.32em 0 -.04em; }
 .radio p.big b { color: var(--blue); }
 
 /* ---------- the panel along the bottom ---------- */
@@ -148,6 +148,20 @@ button { font: inherit; color: inherit; }
   position: fixed; right: 12px; bottom: calc(200px + var(--safe-b)); padding: 8px 14px; border-radius: 999px;
   border: 1px solid var(--line); background: rgba(12, 14, 17, .8); color: var(--ink2); font: 500 13px var(--disp); cursor: pointer;
 }
+
+/* The landing's own line, large in the sky above the LM while the radio has it. */
+.moment {
+  position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); width: max-content; max-width: min(92vw, 760px); margin: 0;
+  text-align: center; pointer-events: none; text-shadow: 0 2px 18px rgba(0, 0, 0, .9);
+  animation: moment-in 1.1s ease-out both;
+}
+.moment p { margin: 0; }
+.moment-who { font: 700 11px/1.2 var(--mono); letter-spacing: .16em; color: var(--blue); }
+.moment-lead { margin-top: 10px !important; font: 500 17px/1.3 var(--disp); color: var(--ink2); }
+.moment-line { margin-top: 4px !important; font: 600 30px/1.12 var(--disp); color: #fff; text-wrap: balance; }
+@keyframes moment-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); } to { opacity: 1; transform: translate(-50%, -50%); } }
+@media (min-width: 760px) { .moment-lead { font-size: 21px; } .moment-line { font-size: 44px; } }
+@media (orientation: landscape) and (max-height: 520px) { .moment-lead { font-size: 14px; } .moment-line { font-size: 24px; } }
 
 /* ---------- cards ---------- */
 .sheet { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: calc(16px + var(--safe-t)) 16px calc(16px + var(--safe-b)); overflow-y: auto; }
@@ -300,9 +314,10 @@ details.loop li b { font-weight: 700; margin-right: .1em; }
   .lever-track { height: 92px; }
   .keys { display: none !important; }
   .coach { bottom: calc(60px + var(--safe-b)); }
-  .skip { bottom: calc(60px + var(--safe-b)); }
+  .skip { bottom: auto; top: calc(96px + var(--safe-t)); right: calc(16px + env(safe-area-inset-right, 0px)); } /* under the clock, off the hand controller */
 }
 @media (prefers-reduced-motion: reduce) {
   .card { backdrop-filter: none; -webkit-backdrop-filter: none; }
   .radio p { transition: none; }
+  .moment { animation: none; }
 }

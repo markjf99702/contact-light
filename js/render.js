@@ -115,12 +115,14 @@ function sky(r, sc) {
 
 function earth(r, sc) {
   const e = sc.site.earth;
+  r.earthBox = null;
   if (!e) return;
   const { ctx, W } = r;
   const v = sc.view;
   const R = clamp(Math.min(W, r.H) * 0.03, 10, 22);
   const top = v.top + 70; // clear of the radio lines
   const x = W * e.x, y = top + (v.bottom - top) * e.y + R;
+  r.earthBox = [x - R, y - R, x + R, y + R]; // so the landing's caption can keep clear of it
   ctx.save();
   ctx.fillStyle = '#0a1220';
   ctx.beginPath();

@@ -120,7 +120,17 @@ try {
   assert.match(await page.locator('#lampContact').getAttribute('class'), /\bon\b/, 'contact light!');
   await until(() => window.contactLight.state().lines.some(l => /Contact light\./.test(l)));
   await until(() => window.contactLight.state().lines.some(l => /The Eagle has landed\./.test(l)));
+  // The line the whole landing builds to, large over the scene, with the LM in view a moment longer.
+  await page.evaluate(() => window.contactLight.speed(1));
+  await until(() => !document.getElementById('moment').hidden);
+  assert.equal(await page.textContent('#momentLine'), 'The Eagle has landed.');
+  assert.equal(await page.textContent('#momentLead'), 'Houston, Tranquility Base here.');
+  assert.match(await page.textContent('#momentWho'), /^ARMSTRONG · 102:4\d:\d\d$/);
+  const mb = await page.locator('#moment').boundingBox(), hb = await page.locator('#hud').boundingBox();
+  assert.ok(mb.y >= hb.y + hb.height && mb.y + mb.height <= (await page.locator('#panel').boundingBox()).y, 'between the numbers and the panel');
+  assert.equal((await state()).screen, 'ending', 'the card waits');
   await until(() => window.contactLight.state().screen === 'result');
+  assert.equal(await page.locator('#moment').isVisible(), false, 'and goes when the card comes');
   const r11 = await state();
   assert.equal(r11.judged.outcome, 'landed');
   assert.equal(r11.judged.tier, 'gold', 'the autopilot earns gold at Tranquility Base');

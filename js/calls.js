@@ -390,7 +390,9 @@ const LANDED = {
 };
 
 // The lines after it's over. judged: the result of judge(); returns lines with an 'at' delay, and
-// 'card': when to show the result card.
+// 'card': when to show the result card. After a landing, its big line is the moment: it's shown
+// large over the scene, and the card waits a few seconds more so it can be read.
+const HOLD = 3.4;
 export function endingLines(site, judged) {
   const r = createRadio(site);
   const P = r.people;
@@ -399,15 +401,14 @@ export function endingLines(site, judged) {
   if (judged.outcome === 'landed') {
     if (site.training) {
       lines = [L(['capcom', judged.tier === 'gold' ? 'That’s a landing. Nicely done.' : 'You’re down. Not bad at all.', 1.2, { big: true }])];
-      card = 2.6;
     } else if (LANDED[site.id]) {
       lines = LANDED[site.id].map(L);
-      const big = lines.find(l => l.big);
-      card = (big ? big.at : 4) + 1.6;
     } else {
       lines = [L(['cdr', 'Shutdown.', 0.8]), L(['lmp', 'Okay. Engine stop.', 1.7]), L(['capcom', `We copy you down, ${P.lm}.`, 4.2]), L(['cdr', 'Houston, we’re down. Good landing.', 6, { big: true }])];
-      card = 7.6;
     }
+    const big = lines.find(l => l.big);
+    if (big) big.moment = true;
+    card = (big ? big.at : 4) + HOLD;
   } else if (judged.outcome === 'tipped') {
     lines = [L(['lmp', 'We’re going over!', 0.6]), L(['capcom', `${P.lm}, Houston. Say your status.`, 4])];
     card = 4.4;

@@ -156,6 +156,7 @@ function startFlight(site, m = mode) {
   $('hudName').textContent = site.free ? 'Free flight' : site.name;
   $('hudPlace').textContent = site.free ? `${site.place} · ground ${site.seed}` : site.place;
   $('radio').textContent = '';
+  $('moment').hidden = true;
   setText('coachText', ''); // the last flight's hint goes with it
   $('lampLow').classList.remove('on');
   $('lampContact').classList.remove('on');
@@ -184,6 +185,7 @@ function show(name) {
   $('result').hidden = name !== 'result';
   $('skipBtn').hidden = name !== 'ending';
   $('coach').hidden = true;
+  if (name !== 'ending') $('moment').hidden = true;
   if (!flying) sound.engine(0);
   layout();
 }
@@ -327,7 +329,35 @@ function say(c, l) {
   if (!c.demo) {
     sound.radioLine(l);
     c.log.push({ t: c.ended ? c.f.touchAt + c.endT : c.f.t, who: l.who, text: l.text });
+    if (l.moment && screen === 'ending') showMoment(c, l, c.log[c.log.length - 1].t);
   }
+}
+
+// The landing's own line ("Houston, Tranquility Base here. The Eagle has landed."), large in the sky
+// between the numbers and the LM: the last sentence big, anything before it smaller above.
+function showMoment(c, l, t) {
+  const parts = l.text.split(/(?<=[.!?])\s+/);
+  setMono('momentWho', `${String(l.who).toUpperCase()} · ${missionTime(c.site, t)}`);
+  setText('momentLead', parts.slice(0, -1).join(' '));
+  $('momentLead').hidden = parts.length < 2;
+  setText('momentLine', parts[parts.length - 1]);
+  const box = $('moment');
+  box.hidden = false;
+  const top = $('hud').getBoundingClientRect().bottom + 8;
+  const bottom = r.lmBox ? Math.min(r.lmBox[1], $('panel').getBoundingClientRect().top) - 12 : innerHeight * 0.6;
+  // A little below the middle of the sky, or wherever it keeps clear of the Earth: higher or lower,
+  // or, where the sky is shallow (a laptop), off to the side away from it.
+  const h = box.offsetHeight, w = box.offsetWidth, e = r.earthBox;
+  const clear = (x, y) => !e || e[3] < y - h / 2 - 6 || e[1] > y + h / 2 + 6 || e[2] < x - w / 2 - 12 || e[0] > x + w / 2 + 12;
+  const ys = [0.6, 0.72, 0.48, 0.84].map(k => Math.max(top + h / 2, top + (bottom - top) * k));
+  let x = innerWidth / 2, y = ys.find(q => clear(x, q));
+  if (y == null) {
+    y = ys[0];
+    const away = e[0] + e[2] > innerWidth ? e[0] - 28 - w / 2 : e[2] + 28 + w / 2;
+    x = Math.max(w / 2 + 8, Math.min(innerWidth - w / 2 - 8, away));
+  }
+  box.style.left = `${Math.round(x)}px`;
+  box.style.top = `${Math.round(y)}px`;
 }
 
 // ---------- drawing and the numbers ----------
