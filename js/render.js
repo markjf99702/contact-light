@@ -34,6 +34,8 @@ export function renderFrame(r, sc) {
     r.dust = [];
     r.puffs = [];
     r.debris = [];
+    r.dustI = 0;
+    r.dustX = null;
     r.bg = buildBackdrop(sc.site);
     r.last = {};
   }
@@ -48,10 +50,10 @@ export function renderFrame(r, sc) {
   backdrop(r, sc);
   earth(r, sc);
   terrain(r, sc);
-  lmShadow(r, sc);
   boulders(r, sc);
   if (sc.marks !== false) marks(r, sc);
   dust(r, sc);
+  lmShadow(r, sc);
   craft(r, sc);
   particles(r, sc);
   if (sc.marks !== false) footprint(r, sc);
@@ -72,7 +74,7 @@ function camera(r, sc) {
   let s = Math.min(sceneH / viewFt, r.W / 96);
   const lead = clamp((f.phase === 'flying' ? f.vx : 0) / 50, -1, 1) * 0.26 * (view.lead ?? 1);
   // Low down, sit the LM a little left of centre: its shadow falls ahead, to the right.
-  const low = clamp((90 - alt) / 60, 0, 1) * (1 - clamp(Math.abs(f.vx) / 12, 0, 1)) * 0.12;
+  const low = clamp((90 - alt) / 60, 0, 1) * (1 - clamp(Math.abs(f.vx) / 12, 0, 1)) * 0.2;
   const cx = fx + ((lead + low) * r.W) / s;
   // (view.shift moves the whole picture sideways, for the title card on a wide screen.)
   // The ground the camera keeps its eye on, averaged so a crater rim doesn't jerk the view.
@@ -769,146 +771,206 @@ function roundRect(ctx, x, y, w, h, rr) {
 // ---------- the LM's shadow, sliding in to meet the footpads ----------
 
 // The Sun is low behind you, so the LM's shadow lies along the ground ahead of it, a long way ahead
-// when you're high, and slides back to meet the footpads as you come down.
+// when you're high, and slides back to meet the footpads as you come down. It's the lander's own
+// parts carried along the Sun's rays to the ground: four footpads, the legs and the two stages
+// stretched out long. z is across the track, toward you; the near ground below the surface line is
+// toward you, so the near-side footpad's shadow falls a little lower on screen than the far one's.
+const SHADOW = {
+  lm: {
+    pads: [[-15.5, 0.4, 0], [15.5, 0.4, 0], [0, 0.4, 15.5], [0, 0.4, -15.5]],
+    legs: [[-15.1, 1, 0, -6.2, 9, 0], [15.1, 1, 0, 6.2, 9, 0], [0, 1, 15.1, 0, 9, 6.2], [0, 1, -15.1, 0, 9, -6.2]],
+    boxes: [[-6.9, 6.9, 4.7, 10.1, 6.9], [-7.5, 6.2, 10.1, 17.4, 6], [-1.6, 1.6, 17.4, 18.8, 1.6]],
+    pad: 1.5,
+  },
+  lltv: {
+    pads: [[-7.5, 0.3, 0], [7.5, 0.3, 0], [0, 0.3, 7.5], [0, 0.3, -7.5]],
+    legs: [[-7.3, 0.7, 0, -4, 6.2, 0], [7.3, 0.7, 0, 4, 6.2, 0], [0, 0.7, 7.3, 0, 6.2, 4], [0, 0.7, -7.3, 0, 6.2, -4]],
+    boxes: [[-4.2, 4.2, 4.4, 8.6, 4.2], [-1.3, 1.3, 2.6, 11.4, 1.3], [4.2, 7.4, 6.6, 11.4, 1.6]],
+    pad: 1.1,
+  },
+};
+
 function lmShadow(r, sc) {
-  const { ctx, X, Y, band, cam } = r;
+  const { ctx, X, Y, band, cam, W } = r;
   const { g, f } = sc;
-  if (f.phase === 'abort') return;
-  const out = OUTLINE[f.veh.id];
-  const tan = Math.tan(g.sun * DEG);
-  let near = Infinity, far = -Infinity;
-  for (const [bx, by] of out) {
+  r.shadowSeen = false;
+  if (f.phase === 'abort' || f.phase === 'tipping' || f.phase === 'crashed') return;
+  const parts = SHADOW[f.veh.id];
+  const tan = Math.tan(Math.max(3, g.sun) * DEG);
+  // Where a point on the lander throws its shadow, along the track.
+  const proj = (bx, by) => {
     const [wx, wy] = toWorld(f, bx, by);
     let gx = wx;
-    for (let k = 0; k < 3; k++) gx = wx + Math.max(0, wy - groundAt(g, gx)) / tan;
-    near = Math.min(near, gx);
-    far = Math.max(far, gx);
+    for (let k = 0; k < 4; k++) gx = wx + Math.max(0, wy - groundAt(g, gx)) / tan;
+    return gx;
+  };
+  const dz = z => band * (0.5 + z / 32);
+  const at = (gx, z) => [X(gx), Y(groundAt(g, gx)) + dz(z)];
+  const near = proj(parts.pads[0][0] - parts.pad, 0); // the aft footpad's
+  const far = proj(parts.boxes[1][1], parts.boxes[1][3]);
+  r.shadowSeen = X(near) < W && X(far) > 0;
+  if (!r.shadowSeen) return;
+  const shade = new Path2D();
+  // The stages: each a block swept along the Sun's rays, from its lower back corner to its upper front one.
+  for (const [x0, x1, y0, y1, zh] of parts.boxes) {
+    const ga = Math.min(proj(x0, y0), proj(x0, y1)), gb = Math.max(proj(x1, y0), proj(x1, y1));
+    const step = Math.max(1, 3 / cam.s);
+    let first = true;
+    for (let x = ga; x <= gb + 1e-6; x += step) { const [px, py] = at(Math.min(x, gb), -zh); first ? shade.moveTo(px, py) : shade.lineTo(px, py); first = false; }
+    for (let x = gb; x >= ga - 1e-6; x -= step) { const [px, py] = at(Math.max(x, ga), zh); shade.lineTo(px, py); }
+    shade.closePath();
   }
-  r.shadowSeen = X(near) > 0 && X(near) < r.W;
-  if (X(near) > r.W + 10 || X(far) < -10) return;
-  // A dark patch on the ground along the track, deepest near the end the footpads cast.
-  const a = sc.site.world === 'earth' ? 0.32 : 0.7; // grass under a high Texas Sun casts a softer shadow
-  const gr = ctx.createLinearGradient(X(near), 0, X(far), 0);
-  gr.addColorStop(0, 'rgba(0,0,0,0)');
-  gr.addColorStop(Math.min(0.12, 6 / Math.max(1, X(far) - X(near))), `rgba(0,0,0,${a})`);
-  gr.addColorStop(0.72, `rgba(0,0,0,${a})`);
-  gr.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = gr;
-  const step = Math.max(1, 2 / cam.s);
-  const top = [], bot = [];
-  for (let x = near; x <= far + 0.01; x += step) {
-    const t = (x - near) / Math.max(1, far - near);
-    const fat = Math.sin(Math.PI * Math.min(1, 0.15 + t * 0.85)) * 0.8 + 0.2;
-    const y = Y(groundAt(g, x));
-    top.push([X(x), y - 0.5]);
-    bot.push([X(x), y + band * (0.8 + 1.5 * fat)]);
+  // The footpads.
+  for (const [bx, by, z] of parts.pads) {
+    const [px, py] = at(proj(bx, by), z);
+    const rx = Math.max(1.6, parts.pad * cam.s * 1.15), ry = Math.max(1.2, Math.min(rx * 0.5, band * 0.22));
+    shade.moveTo(px + rx, py);
+    shade.ellipse(px, py, rx, ry, 0, 0, Math.PI * 2);
   }
+  const a = sc.site.world === 'earth' ? 0.3 : 0.72; // grass under a high Texas Sun casts a softer shadow
+  ctx.fillStyle = `rgba(0,0,0,${a})`;
+  ctx.fill(shade);
+  // The legs, from each footpad's shadow up to the stage's.
+  ctx.strokeStyle = `rgba(0,0,0,${a})`;
+  ctx.lineWidth = Math.max(1.4, 0.55 * cam.s);
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  top.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-  for (let k = bot.length - 1; k >= 0; k--) ctx.lineTo(bot[k][0], bot[k][1]);
-  ctx.closePath();
-  ctx.fill();
+  for (const [ax, ay, az, bx, by, bz] of parts.legs) {
+    const [x0, y0] = at(proj(ax, ay), az), [x1, y1] = at(proj(bx, by), bz);
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+  }
+  ctx.stroke();
 }
 
 // ---------- dust ----------
 
+// Inside about 100 feet the engine blasts the surface out sideways: grains race off in every
+// direction on nearly flat paths and keep going, since there's no air to slow them. Seen from the
+// side that's a bright sheet hugging the ground, streaks along the track and fanning out across the
+// near ground toward you, and close in a haze that hides the surface. When the engine stops it all
+// clears at once: nothing hangs in a vacuum.
+const DUST_MAX = 900;
+const DUST_C = '228,222,210';
+
 function dust(r, sc) {
-  const { ctx, X, Y, band, cam } = r;
+  const { ctx, X, Y, band, cam, H } = r;
   const { g, f, site } = sc;
   const d = site.dust;
   const dt = Math.min(0.05, sc.dt || 0.016);
-  let I = 0, gx = f.x;
+  let want = 0, gx = r.dustX ?? f.x;
   if (f.phase === 'flying' && f.thr > 0.04) {
     const [nx, ny] = toWorld(f, 0, f.veh.bellClear);
     const h = ny - groundAt(g, nx);
-    gx = nx - Math.tan(f.th) * h;
-    I = d.dense * Math.pow(clamp((d.top - h) / (d.top - 4), 0, 1), 1.3) * Math.min(1, f.thr / 0.22);
-    // Particles race out along the ground on nearly flat paths and keep going: there's no air.
-    const n = I * 420 * dt;
+    gx = nx - Math.tan(f.th) * h; // where the exhaust meets the ground
+    want = d.dense * Math.pow(clamp((d.top - h) / (d.top - 4), 0, 1), 1.3) * Math.min(1, f.thr / 0.22);
+  }
+  // It builds as the engine makes it and clears as fast as the grains fly off.
+  r.dustI = want >= r.dustI ? want : r.dustI * Math.exp(-dt / 0.22);
+  if (r.dustI < 0.004) r.dustI = 0;
+  r.dustX = gx;
+  const I = r.dustI;
+  if (want > 0.01) {
+    const n = Math.min(DUST_MAX - r.dust.length, want * 2400 * dt);
     for (let k = 0; k < n; k++) {
-      if (r.dust.length > 420) break;
-      const dir = Math.random() < 0.5 ? -1 : 1;
-      const sp = (70 + Math.random() * 120) * (0.55 + 0.45 * I);
-      const x = gx + dir * Math.random() * 4;
-      r.dust.push({ x, y: groundAt(g, x) + Math.random() * 1.4, vx: dir * sp, vy: sp * (0.012 + Math.random() * 0.05), a: 0.12 + Math.random() * 0.35 });
+      // From a ring round where the plume strikes, not a single point.
+      const a = Math.random() * Math.PI * 2, r0 = 2 + Math.random() * 7;
+      const sp = (90 + Math.random() * 170) * (0.6 + 0.4 * want);
+      r.dust.push({
+        x: gx + Math.cos(a) * r0, z: Math.sin(a) * r0, y: Math.random() * 0.6,
+        vx: Math.cos(a) * sp, vz: Math.sin(a) * sp, vy: sp * (0.006 + Math.random() * 0.03),
+        a: 0.3 + Math.random() * 0.55, tail: 0.02 + Math.random() * 0.035, x0: gx,
+      });
     }
   }
-  r.dustI = I;
-  r.dustX = gx;
-  // Move every particle on its ballistic path.
+  // Every grain on its own ballistic path, until it lands or leaves.
   const [xa, xb] = visibleRange(r);
   const keep = [];
   for (const p of r.dust) {
     p.x += p.vx * dt;
+    p.z += p.vz * dt;
     p.vy -= G_MOON * dt;
     p.y += p.vy * dt;
-    if (p.y < groundAt(g, p.x) - 0.6 || p.x < xa - 300 || p.x > xb + 300) continue;
+    if (p.y < 0 || p.x < xa - 200 || p.x > xb + 200 || Math.abs(p.z) > 160) continue;
     keep.push(p);
   }
   r.dust = keep;
+  if (I <= 0.01) return;
 
-  // The sheet itself, hugging the ground and hiding it, thickest right under you.
-  if (I > 0.02) {
-    const alt = Math.max(0, altitude(f));
-    const R = 24 + Math.max(0, d.top - alt) * 1.35;
-    const T = d.thick * (0.35 + 0.65 * I);
-    const tNow = performance.now() / 1000;
-    const top = [], bot = [];
-    for (let x = gx - R; x <= gx + R; x += Math.max(1, 2 / cam.s)) {
-      const gy = groundAt(g, x);
-      const wob = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(x * 0.21 - Math.sign(x - gx) * tNow * 14));
-      top.push([X(x), Y(gy + T * wob)]);
-      bot.push([X(x), Y(gy) + band + 1]);
-    }
-    const gr = ctx.createLinearGradient(X(gx - R), 0, X(gx + R), 0);
-    const c = site.world === 'earth' ? '150,150,110' : '200,192,178';
-    const a = Math.min(0.92, d.dense * 0.9 * I + 0.08);
-    gr.addColorStop(0, `rgba(${c},0)`);
-    gr.addColorStop(0.3, `rgba(${c},${a * 0.75})`);
-    gr.addColorStop(0.5, `rgba(${c},${a})`);
-    gr.addColorStop(0.7, `rgba(${c},${a * 0.75})`);
-    gr.addColorStop(1, `rgba(${c},0)`);
-    ctx.fillStyle = gr;
+  const deep = Math.max(40, H - (Y(groundAt(g, gx)) + band));
+  const R = 26 + Math.max(0, d.top - Math.max(0, altitude(f))) * 1.3;
+  const C = site.world === 'earth' ? '196,188,150' : DUST_C; // Ellington's is grass and Texas dirt
+  const a = Math.min(0.9, d.dense * 1.05 * I + 0.06);
+  // The haze over the near ground: thick close in, thinning out toward you and to the sides.
+  const cy = Y(groundAt(g, gx)) + band * 0.5;
+  const rx = Math.max(60, R * cam.s * 1.15), ry = deep * (0.3 + 0.75 * I);
+  ctx.save();
+  ctx.translate(X(gx), cy);
+  ctx.scale(1, ry / rx);
+  const haze = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+  haze.addColorStop(0, `rgba(${C},${a})`);
+  haze.addColorStop(0.45, `rgba(${C},${a * 0.62})`);
+  haze.addColorStop(1, `rgba(${C},0)`);
+  ctx.fillStyle = haze;
+  ctx.beginPath();
+  ctx.arc(0, 0, rx, 0, Math.PI);
+  ctx.fill();
+  ctx.restore();
+  // The sheet along the surface, standing a few feet high and brightest right under the engine.
+  const T = d.thick * (0.4 + 0.6 * I);
+  const sheet = ctx.createLinearGradient(X(gx - R), 0, X(gx + R), 0);
+  sheet.addColorStop(0, `rgba(${C},0)`);
+  sheet.addColorStop(0.3, `rgba(${C},${a * 0.55})`);
+  sheet.addColorStop(0.5, `rgba(${C},${a * 0.85})`);
+  sheet.addColorStop(0.7, `rgba(${C},${a * 0.55})`);
+  sheet.addColorStop(1, `rgba(${C},0)`);
+  ctx.fillStyle = sheet;
+  const step = Math.max(1, 2 / cam.s);
+  for (const k of [1, 0.5]) {
     ctx.beginPath();
-    top.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-    for (let k = bot.length - 1; k >= 0; k--) ctx.lineTo(bot[k][0], bot[k][1]);
+    for (let x = gx - R; x <= gx + R; x += step) {
+      const u = (x - gx) / R;
+      ctx.lineTo(X(x), Y(groundAt(g, x) + T * k * (1 - u * u)) - 1);
+    }
+    for (let x = gx + R; x >= gx - R; x -= step) ctx.lineTo(X(x), Y(groundAt(g, x)) + band + 1);
     ctx.closePath();
     ctx.fill();
-    // And over the ground in front: close in, the surface fades out altogether.
-    const cy = r.Y(groundAt(g, gx)) + band;
-    const rx = Math.max(40, R * cam.s * 0.9), ry = Math.min(r.H - cy + 40, 30 + I * 170);
-    ctx.save();
-    ctx.translate(X(gx), cy);
-    ctx.scale(1, ry / rx);
-    const cl = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
-    cl.addColorStop(0, `rgba(${c},${Math.min(0.85, a * 0.95)})`);
-    cl.addColorStop(0.55, `rgba(${c},${a * 0.45})`);
-    cl.addColorStop(1, `rgba(${c},0)`);
-    ctx.fillStyle = cl;
-    ctx.beginPath();
-    ctx.arc(0, 0, rx, 0, Math.PI);
-    ctx.fill();
-    ctx.restore();
   }
+}
+
+// Where a grain is on screen: along the track it sits on the ground line; heading toward you it
+// drops down across the near ground and spreads out, heading away it sinks into the far edge.
+function grainAt(r, sc, x, z, y, deep) {
+  const gy = r.Y(groundAt(sc.g, x) + y);
+  if (z <= 0) return [r.X(x), gy + r.band * 0.45 * Math.max(0, 1 + z / 30)];
+  const q = 1 - Math.exp(-z / 45);
+  const cx = r.X(r.dustX);
+  return [cx + (r.X(x) - cx) * (1 + 1.1 * q), gy + r.band * 0.45 + (deep - r.band * 0.45) * q];
 }
 
 function particles(r, sc) {
   const { ctx, X, Y } = r;
   const { f, g } = sc;
   const dt = Math.min(0.05, sc.dt || 0.016);
-  // Dust streaks.
+  // Dust streaks: each grain drawn back along its path for a few hundredths of a second.
   if (r.dust.length) {
-    const c = sc.site.world === 'earth' ? '170,168,130' : '222,214,200';
-    const groups = [new Path2D(), new Path2D(), new Path2D()];
+    const deep = Math.max(40, r.H - (Y(groundAt(g, r.dustX)) + r.band));
+    const groups = [[new Path2D(), new Path2D(), new Path2D()], [new Path2D(), new Path2D(), new Path2D()]];
     for (const p of r.dust) {
-      const k = p.a < 0.22 ? 0 : p.a < 0.34 ? 1 : 2;
-      groups[k].moveTo(X(p.x), Y(p.y));
-      groups[k].lineTo(X(p.x - p.vx * 0.05), Y(p.y - p.vy * 0.05));
+      const fade = clamp(1 - Math.hypot(p.x - p.x0, p.z) / 150, 0, 1) * p.a;
+      if (fade < 0.06) continue;
+      const [x1, y1] = grainAt(r, sc, p.x, p.z, p.y, deep);
+      const [x0, y0] = grainAt(r, sc, p.x - p.vx * p.tail, p.z - p.vz * p.tail, Math.max(0, p.y - p.vy * p.tail), deep);
+      const path = groups[p.z > 18 ? 1 : 0][fade < 0.25 ? 0 : fade < 0.45 ? 1 : 2];
+      path.moveTo(x0, y0);
+      path.lineTo(x1, y1);
     }
-    ctx.lineWidth = 1.1;
-    [0.16, 0.28, 0.42].forEach((a, k) => {
-      ctx.strokeStyle = `rgba(${c},${a})`;
-      ctx.stroke(groups[k]);
+    groups.forEach((set, w) => {
+      ctx.lineWidth = w ? 1.6 : 1.1;
+      (w ? [0.1, 0.2, 0.34] : [0.2, 0.38, 0.6]).forEach((a, k) => {
+        ctx.strokeStyle = `rgba(${sc.site.world === 'earth' ? '170,168,130' : DUST_C},${a})`;
+        ctx.stroke(set[k]);
+      });
     });
   }
   // Puffs from the attitude jets.
