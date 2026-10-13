@@ -8,7 +8,7 @@ import { rng } from '../js/rng.js';
 import { buildGround, groundAt, surfaceAt, spotAt, litAt } from '../js/terrain.js';
 import { createFlight, step, altitude, pct, hoverSeconds, G_MOON, VEHICLES, ENGINE, LOW_LEVEL, BINGO_AFTER_LOW, FULL_LOAD } from '../js/sim.js';
 import { judge, LIMITS } from '../js/judge.js';
-import { rateText, rateSay, altText, numbersCall, createRadio, radioUpdate, openingLines, endingLines } from '../js/calls.js';
+import { rateText, rateSay, altText, numbersCall, createRadio, radioUpdate, openingLines, endingLines, missionTime } from '../js/calls.js';
 import { createAutopilot, autopilotInput, chooseSpot } from '../js/autopilot.js';
 import { SITES, siteById } from '../js/sites.js';
 import { makeFreeSite } from '../js/freeflight.js';
@@ -241,6 +241,14 @@ test('the radio makes its calls once, in Houston\'s and the crew\'s voices', () 
   const dust2 = radioUpdate(radio, f, [], { ...base, alt: 38, dustOn: true, t: 41 });
   assert.ok(!dust2.some(l => l.text === 'Picking up some dust.'), 'only once');
   assert.match(openingLines(site)[0].text, /Eagle, Houston\. You’re go for landing/);
+});
+
+test('the loop is stamped in each mission\'s own clock', () => {
+  // Armstrong took over in P66 at 102:43:22; Eagle's contact light came on at 102:45:40.
+  assert.equal(missionTime(siteById('a11'), 0), '102:43:22');
+  assert.equal(missionTime(siteById('a11'), 138), '102:45:40');
+  assert.equal(missionTime(siteById('a17'), 67), '113:01:58', 'Challenger\'s contact, 67 s after Cernan took over');
+  assert.equal(missionTime(siteById('ellington'), 75), '1:15', 'training just counts the flight');
 });
 
 test('after a good landing come the real words', () => {

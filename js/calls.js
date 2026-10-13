@@ -361,3 +361,15 @@ export function endingLines(site, judged) {
 }
 
 export { say as speakable };
+
+// The mission clock the transcripts are kept in: hours:minutes:seconds since launch. A landing's
+// lines are stamped from the moment that crew took over in P66, so yours read like theirs.
+export function missionTime(site, t) {
+  if (!site.get) {
+    const s = Math.max(0, Math.round(t));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+  const [h, m, sec] = site.get.split(':').map(Number);
+  const all = h * 3600 + m * 60 + sec + Math.round(t);
+  return `${Math.floor(all / 3600)}:${String(Math.floor(all / 60) % 60).padStart(2, '0')}:${String(all % 60).padStart(2, '0')}`;
+}

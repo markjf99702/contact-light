@@ -5,7 +5,7 @@ import { SITES, siteById } from './sites.js';
 import { buildGround } from './terrain.js';
 import { createFlight, step, altitude, pct, finish, BINGO_AFTER_LOW, LAND_AFTER_BINGO } from './sim.js';
 import { judge, feet } from './judge.js';
-import { createRadio, radioUpdate, openingLines, endingLines } from './calls.js';
+import { createRadio, radioUpdate, openingLines, endingLines, missionTime } from './calls.js';
 import { createAutopilot, autopilotInput } from './autopilot.js';
 import { createRenderer, resizeRenderer, renderFrame, burst, bump } from './render.js';
 import { drawProfile } from './strip.js';
@@ -130,7 +130,7 @@ function newFlight(site, m, opts = {}) {
     site, g, f, mode: m,
     key: `${site.id}-${site.seed || ''}-${Date.now()}-${Math.random()}`,
     radio: createRadio(site),
-    lines: [], pending: [], ended: false, judged: null, endT: 0, ending: null,
+    log: [], pending: [], ended: false, judged: null, endT: 0, ending: null,
     ap: opts.autopilot ? createAutopilot(site, g, f.veh, m === 'arcade' ? 'arcade' : 'p66') : null,
     coach: site.training && !opts.autopilot ? createCoach() : null,
     demo: !!opts.demo,
@@ -311,7 +311,10 @@ function say(c, l) {
   while (box.children.length > (innerWidth < 600 ? 2 : 3)) box.firstChild.remove();
   const ps = [...box.children];
   ps.forEach((el, k) => { el.classList.toggle('old', k === ps.length - 2); el.classList.toggle('older', k < ps.length - 2); });
-  if (!c.demo) sound.radioLine(l);
+  if (!c.demo) {
+    sound.radioLine(l);
+    c.log.push({ t: c.ended ? c.f.touchAt + c.endT : c.f.t, who: l.who, text: l.text });
+  }
 }
 
 // ---------- drawing and the numbers ----------
@@ -423,7 +426,8 @@ function renderTitle() {
     b.className = 'site';
     b.dataset.site = s.id;
     const e = best[s.id];
-    b.innerHTML = `<span><span class="nm">${s.name} <span>· ${s.place}</span></span><span class="sub">${s.training ? 'Learn the controls in the LLTV' : `${s.craft} · ${s.date}`}</span></span><span class="medal ${e ? e.tier : ''}" aria-label="${e ? e.tier + ' plaque' : 'no plaque yet'}">${e ? e.tier[0].toUpperCase() : ''}</span>`;
+    const first = s.training && !store.flights;
+    b.innerHTML = `<span><span class="nm">${s.name} <span>· ${s.place}</span>${first ? ' <em class="start">Start here</em>' : ''}</span><span class="sub">${s.training ? 'Learn the controls in the LLTV' : `${s.craft} · ${s.date}`}</span></span><span class="medal ${e ? e.tier : ''}" aria-label="${e ? e.tier + ' plaque' : 'no plaque yet'}">${e ? e.tier[0].toUpperCase() : ''}</span>`;
     b.addEventListener('click', () => showBrief(s));
     li.append(b);
     return li;
@@ -515,8 +519,10 @@ function showResult() {
   $('plaque').hidden = !j.ok;
   $('rTitle').textContent = j.ok ? `${j.tier[0].toUpperCase()}${j.tier.slice(1)} plaque` : j.title;
   const where = s.free ? `ground ${s.seed}` : s.training ? 'Ellington' : s.place;
+  // Your contact light against the real one, in the mission's own clock.
+  const real = j.ok && s.contact && c.f.contactAt != null ? ` Contact light at ${missionTime(s, c.f.contactAt)}; ${s.craft}’s came on at ${s.contact}.` : '';
   $('rReason').textContent = j.ok
-    ? (c.newBest ? `Your best at ${where} so far.` : `Landed at ${where}.`)
+    ? (c.newBest ? `Your best at ${where} so far.` : `Landed at ${where}.`) + real
     : j.reason;
   const rows = $('rRows');
   rows.replaceChildren(...j.rows.map(row => {
@@ -537,6 +543,18 @@ function showResult() {
   $('nextBtn').hidden = !s.free && !next;
   $('nextBtn').textContent = s.free ? 'New ground' : next ? `Next: ${next.name}` : '';
   $('againBtn').textContent = j.ok ? 'Fly it again' : 'Try again';
+  // The landing as the transcript would have it.
+  $('loopList').replaceChildren(...c.log.map(l => {
+    const li = document.createElement('li');
+    const time = document.createElement('span');
+    time.textContent = missionTime(s, l.t);
+    const who = document.createElement('b');
+    who.textContent = `${l.who}:`;
+    li.append(time, who, document.createTextNode(` ${l.text}`));
+    return li;
+  }));
+  $('loop').hidden = !c.log.length;
+  $('loop').open = false;
   if (j.ok) sound.play('plaque');
 }
 $('skipBtn').addEventListener('click', showResult);

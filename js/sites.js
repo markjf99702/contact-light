@@ -42,6 +42,8 @@ export const SITES = [
     craft: 'Eagle',
     date: '20 July 1969',
     crew: 'Neil Armstrong and Buzz Aldrin',
+    get: '102:43:22', // when the crew took over in P66 (Apollo Lunar Surface Journal)
+    contact: '102:45:40', // and when that crew's contact light came on
     vehicle: 'lm',
     mass: H,
     fuel: 9.1,
@@ -81,6 +83,8 @@ export const SITES = [
     craft: 'Intrepid',
     date: '19 November 1969',
     crew: 'Pete Conrad and Alan Bean',
+    get: '110:30:48', // when the crew took over in P66 (Apollo Lunar Surface Journal)
+    contact: '110:32:35', // and when that crew's contact light came on
     vehicle: 'lm',
     mass: H,
     fuel: 9.1,
@@ -122,6 +126,8 @@ export const SITES = [
     craft: 'Antares',
     date: '5 February 1971',
     crew: 'Alan Shepard and Edgar Mitchell',
+    get: '108:13:10', // when the crew took over in P66 (Apollo Lunar Surface Journal)
+    contact: '108:15:11', // and when that crew's contact light came on
     vehicle: 'lm',
     mass: H,
     fuel: 8.3,
@@ -162,6 +168,8 @@ export const SITES = [
     craft: 'Falcon',
     date: '30 July 1971',
     crew: 'Dave Scott and Jim Irwin',
+    get: '104:41:08', // when the crew took over in P66 (Apollo Lunar Surface Journal)
+    contact: '104:42:29', // and when that crew's contact light came on
     vehicle: 'lm',
     mass: J,
     fuel: 9.0,
@@ -207,6 +215,8 @@ export const SITES = [
     craft: 'Orion',
     date: '21 April 1972',
     crew: 'John Young and Charlie Duke',
+    get: '104:28:33', // when the crew took over in P66 (Apollo Lunar Surface Journal)
+    contact: '104:29:36', // and when that crew's contact light came on
     vehicle: 'lm',
     mass: J,
     fuel: 7.8,
@@ -248,6 +258,8 @@ export const SITES = [
     craft: 'Challenger',
     date: '11 December 1972',
     crew: 'Gene Cernan and Harrison Schmitt',
+    get: '113:00:51', // when the crew took over in P66 (Apollo Lunar Surface Journal)
+    contact: '113:01:58', // and when that crew's contact light came on
     vehicle: 'lm',
     mass: J,
     fuel: 9.0,

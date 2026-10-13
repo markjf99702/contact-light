@@ -123,6 +123,10 @@ try {
   assert.equal(r11.judged.tier, 'gold', 'the autopilot earns gold at Tranquility Base');
   assert.ok(r11.record.down < 3 && r11.record.side < 1, 'a soft landing');
   assert.match(await page.textContent('#plaque'), /TRANQUILITY BASE/);
+  assert.match(await page.textContent('#rReason'), /Contact light at 102:4\d:\d\d; Eagle’s came on at 102:45:40\./, 'your contact light against Eagle\'s');
+  assert.ok(await page.locator('#loopList li').count() > 8, 'the landing as a transcript');
+  assert.match(await page.textContent('#loopList'), /102:43:22Duke: Eagle, Houston\. You’re go for landing\./, 'stamped from when Armstrong took over');
+  assert.match(await page.textContent('#loopList'), /Armstrong: Houston, Tranquility Base here\. The Eagle has landed\./);
 
   await page.tap('#sitesBtn');
   await page.locator('#title').waitFor();
