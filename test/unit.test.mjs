@@ -434,6 +434,9 @@ for (const mode of ['p66', 'arcade']) {
       assert.equal(j.tier, 'gold', `${site.id}: ${JSON.stringify(j.rows.map(x => [x.key, x.value, x.tier]))}`);
       assert.ok(r.fuelSec > 60, `${site.id}: ${r.fuelSec.toFixed(0)} s of hover left`);
       assert.ok(['plenty', 'low', 'after60'].includes(r.clock), `${site.id}: down before the 30-second call (${r.clock})`);
+      // Fuel is tight enough that even a quick, tidy landing sees the low-level light, so a careful
+      // one hears Houston's calls.
+      if (!site.training) assert.notEqual(r.clock, 'plenty', `${site.id}: the low-level light came on before touchdown`);
     }
   });
 }

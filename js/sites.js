@@ -46,7 +46,7 @@ export const SITES = [
     contact: '102:45:40', // and when that crew's contact light came on
     vehicle: 'lm',
     mass: H,
-    fuel: 9.1,
+    fuel: 8.3,
     sun: 10.8,
     earth: { x: 0.8, y: 0.16, lit: 0.62 },
     palette: { soil: [132, 126, 116], deep: [52, 49, 45] },
@@ -87,7 +87,7 @@ export const SITES = [
     contact: '110:32:35', // and when that crew's contact light came on
     vehicle: 'lm',
     mass: H,
-    fuel: 9.1,
+    fuel: 8.6,
     sun: 5.1,
     earth: { x: 0.22, y: 0.15, lit: 0.6 },
     palette: { soil: [128, 125, 119], deep: [50, 48, 46] },
@@ -130,7 +130,7 @@ export const SITES = [
     contact: '108:15:11', // and when that crew's contact light came on
     vehicle: 'lm',
     mass: H,
-    fuel: 8.3,
+    fuel: 8.1,
     sun: 10.3,
     earth: { x: 0.25, y: 0.13, lit: 0.66 },
     palette: { soil: [140, 135, 126], deep: [56, 53, 49] },
@@ -172,7 +172,7 @@ export const SITES = [
     contact: '104:42:29', // and when that crew's contact light came on
     vehicle: 'lm',
     mass: J,
-    fuel: 9.0,
+    fuel: 8.7,
     sun: 12.2,
     earth: { x: 0.52, y: 0.1, lit: 0.6 },
     palette: { soil: [134, 128, 117], deep: [52, 49, 44] },
@@ -262,7 +262,7 @@ export const SITES = [
     contact: '113:01:58', // and when that crew's contact light came on
     vehicle: 'lm',
     mass: J,
-    fuel: 9.0,
+    fuel: 8.7,
     sun: 13.3,
     earth: { x: 0.7, y: 0.2, lit: 0.58 },
     palette: { soil: [118, 113, 106], deep: [46, 44, 41] },
