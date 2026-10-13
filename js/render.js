@@ -682,8 +682,12 @@ function marks(r, sc) {
       let hi = -Infinity;
       for (let k = -1; k <= 1; k++) hi = Math.max(hi, groundAt(g, l.x + k * (l.r || 40)));
       const y = Math.min(Y(hi) - 16, Y(groundAt(g, l.x)) - 16);
-      ctx.fillStyle = `rgba(232, 226, 214, ${0.62 * la})`;
-      ctx.fillText(l.name.toUpperCase(), X(l.x), y);
+      // Names fade out at the edges of the screen rather than being cut off there.
+      const text = l.name.toUpperCase(), hw = ctx.measureText(text).width / 2, x = X(l.x);
+      const edge = clamp((Math.min(x - hw, W - x - hw) + 4) / 24, 0, 1);
+      if (edge <= 0) continue;
+      ctx.fillStyle = `rgba(232, 226, 214, ${0.62 * la * edge})`;
+      ctx.fillText(text, x, y);
     }
   }
   // The target.
@@ -1131,6 +1135,13 @@ function footprint(r, sc) {
   ctx.font = '700 11px "B612 Mono", ui-monospace, monospace';
   ctx.textAlign = 'center';
   const label = q.rock >= 1.5 || q.bodyHit ? 'ROCK' : q.bellHit ? 'BUMP' : `${Math.round(rest)}°`;
-  ctx.fillText(label, (X(xl) + X(xr)) / 2, (yl + yr) / 2 - tick - 6);
+  // Above the marks while there's room; once the footpads come down to it, below the ground line.
+  const mid = (yl + yr) / 2, pads = Y(f.y - v.cg);
+  const ly = mid - pads > tick + 34 ? mid - tick - 6 : mid + r.band + 14;
+  ctx.lineWidth = 3;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(8, 10, 12, .55)';
+  ctx.strokeText(label, (X(xl) + X(xr)) / 2, ly);
+  ctx.fillText(label, (X(xl) + X(xr)) / 2, ly);
   ctx.restore();
 }
