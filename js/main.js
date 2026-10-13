@@ -318,7 +318,7 @@ function say(c, l) {
   if (l.big) p.classList.add('big');
   const b = document.createElement('b');
   b.textContent = String(l.who || '').toUpperCase();
-  p.append(b, document.createTextNode(l.text.replace(/[’‘]/g, "'")));
+  p.append(b, ...monoNodes(l.text.replace(/[’‘]/g, "'")));
   box.append(p);
   while (box.children.length > (innerWidth < 600 ? 2 : 3)) box.firstChild.remove();
   const ps = [...box.children];
@@ -355,7 +355,7 @@ function draw(c, dt) {
   if (since != null && fly) {
     const toBingo = BINGO_AFTER_LOW - since;
     const left = toBingo > 0 ? toBingo : toBingo + LAND_AFTER_BINGO;
-    setText('clockTime', `${Math.floor(Math.max(0, left) / 60)}:${String(Math.floor(Math.max(0, left) % 60)).padStart(2, '0')}`);
+    setMono('clockTime', `${Math.floor(Math.max(0, left) / 60)}:${String(Math.floor(Math.max(0, left) % 60)).padStart(2, '0')}`);
     $('clock').firstElementChild.textContent = toBingo > 0 ? 'BINGO' : 'LAND';
     $('clock').classList.toggle('urgent', toBingo <= 30);
   }
@@ -415,6 +415,25 @@ function setNum(id, t) {
   dot.textContent = '.';
   el.replaceChildren(t.slice(0, i), dot, t.slice(i + 1));
 }
+// B612 Mono gives a comma, colon, point or apostrophe a whole cell with the ink at its left, so
+// "You're" read "You' re" and the clock "1: 33". Each gets a span that pulls the next character in.
+function monoNodes(text) {
+  const out = [];
+  let run = '';
+  for (const ch of text) {
+    if (!PUNCT.test(ch)) { run += ch; continue; }
+    if (run) out.push(run);
+    run = '';
+    const span = document.createElement('span');
+    span.className = 'pn';
+    span.textContent = ch;
+    out.push(span);
+  }
+  if (run) out.push(run);
+  return out;
+}
+const PUNCT = /[',:;.]/;
+function setMono(id, t) { if (texts[id] !== t) { texts[id] = t; $(id).replaceChildren(...monoNodes(t)); } }
 function flag(id, cls) { const el = $(id); el.classList.toggle('warn', cls === 'warn'); el.classList.toggle('bad', cls === 'bad'); }
 
 // ---------- the attract flight ----------

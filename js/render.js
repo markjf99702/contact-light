@@ -736,7 +736,7 @@ function offscreen(r, sc) {
   const text = `${sc.site.target.label} ${Math.round(d).toLocaleString('en-US')} ft`;
   ctx.save();
   ctx.font = '700 10px "B612 Mono", ui-monospace, monospace';
-  const w = ctx.measureText(text).width + 26;
+  const w = monoWidth(ctx, text) + 26;
   const x = right ? W - w - 8 : 8;
   // Halfway down the view, unless the LM is there: then high up, or just above the ground.
   const b = r.lmBox;
@@ -751,15 +751,40 @@ function offscreen(r, sc) {
   ctx.stroke();
   ctx.fillStyle = 'rgba(160, 228, 255, .95)';
   ctx.textBaseline = 'middle';
-  ctx.textAlign = right ? 'left' : 'right';
   if (right) {
-    ctx.fillText(text, x + 9, y + 0.5);
+    monoText(ctx, text, x + 9, y + 0.5, 'left');
     tri(ctx, x + w - 9, y, 1);
   } else {
-    ctx.fillText(text, x + w - 9, y + 0.5);
+    monoText(ctx, text, x + w - 9, y + 0.5, 'right');
     tri(ctx, x + 9, y, -1);
   }
   ctx.restore();
+}
+
+// B612 Mono gives a comma, colon or point a whole cell with its ink at the left, so "1,288" drew as
+// "1, 288". Drawn a character at a time, what follows one is pulled in, as the numbers at the top are.
+const PUNCT = /[',:;.]/;
+function monoWidth(ctx, text) {
+  const cell = ctx.measureText('0').width;
+  let w = 0;
+  for (const ch of text) w += PUNCT.test(ch) ? cell * 0.45 : cell;
+  return w;
+}
+function monoText(ctx, text, x, y, align = 'left', outline = false) {
+  const cell = ctx.measureText('0').width, w = monoWidth(ctx, text);
+  const x0 = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+  const keep = ctx.textAlign;
+  ctx.textAlign = 'left';
+  for (const pass of outline ? ['stroke', 'fill'] : ['fill']) {
+    let cx = x0;
+    for (const ch of text) {
+      const tight = PUNCT.test(ch);
+      if (pass === 'stroke') ctx.strokeText(ch, cx - (tight ? cell * 0.06 : 0), y);
+      else ctx.fillText(ch, cx - (tight ? cell * 0.06 : 0), y);
+      cx += tight ? cell * 0.45 : cell;
+    }
+  }
+  ctx.textAlign = keep;
 }
 
 function tri(ctx, x, y, d) {
@@ -1188,7 +1213,6 @@ function footprint(r, sc) {
   ctx.lineWidth = 3;
   ctx.lineJoin = 'round';
   ctx.strokeStyle = 'rgba(8, 10, 12, .55)';
-  ctx.strokeText(label, (X(xl) + X(xr)) / 2, ly);
-  ctx.fillText(label, (X(xl) + X(xr)) / 2, ly);
+  monoText(ctx, label, (X(xl) + X(xr)) / 2, ly, 'center', true);
   ctx.restore();
 }

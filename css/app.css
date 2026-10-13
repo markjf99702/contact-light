@@ -78,6 +78,8 @@ button { font: inherit; color: inherit; }
 .radio p b { font-weight: 700; letter-spacing: .06em; margin-right: .5em; color: var(--ink3); font-size: 11px; }
 .radio p.capcom b { color: var(--cyan); }
 .radio p.big { color: #fff; }
+/* A comma, colon, point or apostrophe takes a whole cell in B612 Mono, with its ink at the left. */
+.radio .pn, .clock .pn { margin: 0 -.32em 0 -.04em; }
 .radio p.big b { color: var(--blue); }
 
 /* ---------- the panel along the bottom ---------- */
