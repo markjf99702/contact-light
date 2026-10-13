@@ -1,6 +1,7 @@
 // Judging a touchdown. Each number gets gold, silver or bronze, and the plaque is the worst of them,
-// so the table always says exactly what to fly better. Limits past bronze are the LM's own: the legs
-// were built for 10 ft/s down and 4 ft/s sideways, and a 12° slope.
+// so the table always says exactly what to fly better. Limits past bronze are the LM's own (Apollo
+// Experience Report TN D-6722): the landing gear's design envelope ran from 10 ft/s down with no
+// sideways speed to 7 ft/s down at 4 ft/s sideways, and it was certified for slopes up to 12°.
 
 export const TIERS = ['gold', 'silver', 'bronze'];
 
@@ -23,6 +24,9 @@ const FUEL_NOTE = {
 
 const rankBy = (v, lim) => (v <= lim[0] ? 0 : v <= lim[1] ? 1 : v <= lim[2] ? 2 : 3);
 
+// The most the legs take coming straight down, less the faster you're moving sideways.
+export const downLimit = side => LIMITS.down[2] - 0.75 * Math.min(LIMITS.side[2], Math.max(0, side));
+
 export const one = v => (v < 9.95 ? v.toFixed(1) : String(Math.round(v)));
 export const feet = v => `${Math.round(v).toLocaleString('en-US')} ft`;
 
@@ -39,7 +43,7 @@ export function judge(rec, site) {
   }
   const tgt = site.target.tiers;
   const rows = [
-    { key: 'down', label: 'Down', value: `${one(rec.down)} ft/s`, rank: rankBy(rec.down, LIMITS.down), need: `${LIMITS.down[0]} ft/s or softer` },
+    { key: 'down', label: 'Down', value: `${one(rec.down)} ft/s`, rank: rankBy(rec.down, [LIMITS.down[0], LIMITS.down[1], downLimit(rec.side)]), need: `${LIMITS.down[0]} ft/s or softer` },
     { key: 'side', label: 'Sideways', value: `${one(rec.side)} ft/s`, rank: rankBy(rec.side, LIMITS.side), need: `${LIMITS.side[0]} ft/s or less` },
     { key: 'tilt', label: 'Tilt', value: `${Math.round(rec.tilt)}°`, rank: rankBy(rec.tilt, LIMITS.tilt), need: `upright, within ${LIMITS.tilt[0]}°` },
     { key: 'slope', label: 'Ground', value: `${Math.round(rec.rest)}° slope`, rank: rankBy(rec.rest, LIMITS.slope), need: `level, within ${LIMITS.slope[0]}°` },
@@ -54,9 +58,11 @@ export function judge(rec, site) {
     outcome = 'crash'; title = 'Crashed';
     reason = 'The descent stage hit the ground before the footpads did.';
     tip = 'Keep well above the crater walls and boulders until you are over your spot, then come straight down.';
-  } else if (rec.down > LIMITS.down[2]) {
+  } else if (rec.down > downLimit(rec.side)) {
     outcome = 'crash'; title = 'Hard landing';
-    reason = `${one(rec.down)} ft/s down. The legs were built for 10.`;
+    reason = rec.side < 0.5
+      ? `${one(rec.down)} ft/s down. The legs were built for 10.`
+      : `${one(rec.down)} ft/s down while moving ${one(rec.side)} ft/s sideways. The legs were built for ${one(downLimit(rec.side))} like that, and 10 coming straight down.`;
     tip = 'Click the rate up as you get low: 3 or 4 ft/s down by 50 feet, 2 or less for the last few.';
   } else if (rec.bodyHit) {
     outcome = 'crash'; title = 'Down on a boulder';

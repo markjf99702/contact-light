@@ -188,7 +188,11 @@ test('a plaque is as good as its worst number', () => {
 test('past the LM\'s limits it crashes or tips over', () => {
   const site = flatSite();
   const at = over => judge(rec(over), site);
-  assert.equal(at({ down: LIMITS.down[2] + 0.5 }).outcome, 'crash');
+  assert.equal(at({ down: LIMITS.down[2] + 0.5, side: 0 }).outcome, 'crash');
+  // The design envelope narrows with speed along the ground: 9 ft/s is fine straight down, not at 3 ft/s sideways.
+  assert.equal(at({ down: 9, side: 0 }).outcome, 'landed');
+  assert.equal(at({ down: 9, side: 3 }).outcome, 'crash');
+  assert.match(at({ down: 9, side: 3 }).reason, /built for 7\.8 like that/);
   assert.match(at({ down: 14 }).reason, /14 ft\/s down\. The legs were built for 10/);
   assert.equal(at({ side: 4.5 }).outcome, 'tipped');
   assert.equal(at({ tilt: 13 }).outcome, 'tipped');

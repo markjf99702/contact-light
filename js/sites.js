@@ -152,7 +152,7 @@ export const SITES = [
     start: { x: 0, alt: 360, vx: 24, vy: -10 },
     target: { x: 1240, tiers: [120, 400], label: 'TARGET' },
     brief: 'Fra Mauro is hummocky ground with no real flat. The computer was going to put you down short, in among the Triplet craters. Fly over them to the planned spot and find the flattest bit of ground near it.',
-    history: 'Al Shepard flew across North Triplet and landed almost on the planned point, on a slope of about 7°. He left the engine running through contact: “a pretty light touchdown.”',
+    history: 'Al Shepard flew on across North Triplet toward the planned point, where it looked smoother, and landed on a slope of about 7°. He left the engine running through contact: “a pretty light touchdown.”',
   },
   {
     id: 'a15',
@@ -210,7 +210,7 @@ export const SITES = [
     vehicle: 'lm',
     mass: J,
     fuel: 8.1,
-    sun: 11.9,
+    sun: 14.8,
     earth: { x: 0.76, y: 0.12, lit: 0.62 },
     palette: { soil: [150, 146, 138], deep: [60, 58, 54] },
     dust: { top: 80, thick: 2.6, dense: 0.55 },
