@@ -38,6 +38,8 @@ export function renderFrame(r, sc) {
     r.debris = [];
     r.dustI = 0;
     r.dustX = null;
+    r.lastW = null;
+    r.jetWait = 0;
     r.bg = buildBackdrop(sc.site);
     r.last = {};
   }
@@ -1056,27 +1058,42 @@ function particles(r, sc) {
       });
     });
   }
-  // Puffs from the attitude jets.
-  if (f.phase === 'flying' && f.veh.id === 'lm' && f.jets > 0.2 && Math.random() < f.jets * 0.6) {
-    const s = Math.sign(f.w) || 1;
-    for (const [bx, by, up] of [[-7.0, 15.6, s > 0 ? 1 : -1], [6.5, 15.7, s > 0 ? -1 : 1]]) {
-      const [wx, wy] = toWorld(f, bx, by + up * 0.9);
-      const dir = [Math.sin(f.th) * up, Math.cos(f.th) * up];
-      r.puffs.push({ x: wx, y: wy, vx: dir[0] * 24 + f.vx, vy: dir[1] * 24 + f.vy, t: 0 });
-    }
+  // The attitude jets: a brief bright jet from each thruster quad as they fire, gone in a tenth of a
+  // second. Nothing hangs about in a vacuum, so there's no smoke.
+  const dw = f.w - (r.lastW ?? f.w);
+  r.lastW = f.w;
+  r.jetWait = (r.jetWait ?? 0) - dt;
+  if (f.phase === 'flying' && f.veh.id === 'lm' && f.jets > 0.3 && Math.abs(dw) > 1e-5 && r.jetWait <= 0) {
+    r.jetWait = 0.07 + Math.random() * 0.07;
+    // Tipping the top forward, the aft quad fires down and the forward quad up; the other way round, the other way.
+    const s = Math.sign(dw), k = Math.min(1, f.jets);
+    r.puffs.push({ bx: -7.0, by: 15.6, up: -s, t: 0, k }, { bx: 6.5, by: 15.7, up: s, t: 0, k });
   }
   const keep = [];
-  for (const p of r.puffs) {
-    p.t += dt;
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
-    if (p.t > 0.3) continue;
-    keep.push(p);
-    const rad = (0.4 + p.t * 5) * r.cam.s;
-    ctx.fillStyle = `rgba(240, 240, 235, ${0.5 * (1 - p.t / 0.3)})`;
-    ctx.beginPath();
-    ctx.arc(X(p.x), Y(p.y), Math.max(1, rad), 0, Math.PI * 2);
-    ctx.fill();
+  if (f.phase === 'flying') {
+    const sc2 = r.craftScale || r.cam.s, c = Math.cos(f.th), sn = Math.sin(f.th);
+    // A point on the LM as it's drawn (a little larger than true when far off).
+    const at = (bx, by) => { const dy = by - f.veh.cg; return [X(f.x) + (bx * c + dy * sn) * sc2, Y(f.y) - (-bx * sn + dy * c) * sc2]; };
+    for (const p of r.puffs) {
+      p.t += dt;
+      if (p.t > 0.1) continue;
+      keep.push(p);
+      const a = 1 - p.t / 0.1, len = 1.2 + 2.6 * p.k;
+      const [x0, y0] = at(p.bx, p.by + p.up * 1.15), [x1, y1] = at(p.bx, p.by + p.up * len);
+      const w0 = Math.max(0.6, 0.25 * sc2), w1 = Math.max(1.2, 0.85 * sc2);
+      const l = Math.hypot(x1 - x0, y1 - y0) || 1, nx = (y0 - y1) / l, ny = (x1 - x0) / l;
+      const gr = ctx.createLinearGradient(x0, y0, x1, y1);
+      gr.addColorStop(0, `rgba(255, 255, 255, ${0.9 * a})`);
+      gr.addColorStop(1, 'rgba(200, 225, 255, 0)');
+      ctx.fillStyle = gr;
+      ctx.beginPath();
+      ctx.moveTo(x0 + nx * w0, y0 + ny * w0);
+      ctx.lineTo(x1 + nx * w1, y1 + ny * w1);
+      ctx.lineTo(x1 - nx * w1, y1 - ny * w1);
+      ctx.lineTo(x0 - nx * w0, y0 - ny * w0);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
   r.puffs = keep;
   // Debris after a crash.
@@ -1149,6 +1166,7 @@ function craft(r, sc) {
   // Far off, draw it a little bigger than true so it never shrinks to a speck.
   const k = Math.max(1, 30 / (span * cam.s));
   const sc2 = cam.s * k;
+  r.craftScale = sc2;
   // Where it is on screen, roughly, so the target pointer can keep out of its way.
   const half = (f.veh.half + 2) * sc2;
   r.lmBox = [X(f.x) - half, Y(f.y) - (f.veh.height - f.veh.cg + 1) * sc2, X(f.x) + half, Y(f.y) + (f.veh.cg + f.veh.probe + 1) * sc2];
