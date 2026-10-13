@@ -283,7 +283,7 @@ function onEvent(c, e) {
       if (e.type === 'touchdown') {
         finish(f, j.outcome);
         if (j.outcome === 'crash') { burst(r, f); sound.play('crash'); sound.buzz([90, 40, 140]); }
-        else if (e.record.down > 5) { bump(r, 6); sound.play('hard'); sound.buzz(70); }
+        else if (e.record.down > 5) { bump(r, 6, f); sound.play('hard'); sound.buzz(70); }
         else { bump(r, 2); sound.play('thud'); sound.buzz(35); }
       } else sound.play('abort');
       sound.engine(0);

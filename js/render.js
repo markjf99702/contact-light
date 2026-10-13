@@ -1016,8 +1016,18 @@ function particles(r, sc) {
         p.y += p.vy * dt;
         if (p.y <= groundAt(g, p.x)) { p.y = groundAt(g, p.x); p.rest = true; }
       }
+      // Shards of foil and panel, tumbling until they land.
+      if (!p.rest) p.rot += p.spin * dt;
+      const z = Math.max(1.6, p.s * r.cam.s);
+      ctx.save();
+      ctx.translate(X(p.x), Y(p.y) - z * 0.3);
+      ctx.rotate(p.rot);
       ctx.fillStyle = p.c;
-      ctx.fillRect(X(p.x) - 1.5, Y(p.y) - 1.5, 3, 3);
+      ctx.beginPath();
+      if (p.tri) { ctx.moveTo(-z * 0.6, z * 0.4); ctx.lineTo(z * 0.6, z * 0.3); ctx.lineTo(-z * 0.1, -z * 0.5); }
+      else ctx.rect(-z * 0.5, -z * 0.3, z, z * 0.6);
+      ctx.fill();
+      ctx.restore();
     }
   }
 }
@@ -1028,12 +1038,33 @@ export function burst(r, f, n = 40) {
   for (let k = 0; k < n; k++) {
     // Thrown gently: in Moon gravity anything faster stays up for many seconds.
     const a = 0.25 + Math.random() * (Math.PI - 0.5), sp = 4 + Math.random() * 14;
-    r.debris.push({ x: f.x + (Math.random() - 0.5) * 12, y: f.y - f.veh.cg + 3, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, c: cols[k % cols.length] });
+    r.debris.push({
+      x: f.x + (Math.random() - 0.5) * 12, y: f.y - f.veh.cg + 3, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      c: cols[k % cols.length], s: 0.3 + Math.pow(Math.random(), 2) * 1.4, rot: Math.random() * 6.3, spin: (Math.random() - 0.5) * 16, tri: Math.random() < 0.55,
+    });
   }
+  kick(r, f, 320, 1);
   if (!still()) r.shake = 10;
 }
 
-export function bump(r, k = 3) { if (!still()) r.shake = Math.max(r.shake, k); }
+// Soil thrown up where something hits the ground: it arcs out and falls back, with no air to hold it.
+function kick(r, f, n, k) {
+  r.dustX = f.x;
+  r.dustI = Math.max(r.dustI || 0, 0.45 * k);
+  for (let i = 0; i < n && r.dust.length < DUST_MAX; i++) {
+    const a = Math.random() * Math.PI * 2, sp = (18 + Math.random() * 70) * k;
+    r.dust.push({
+      x: f.x + Math.cos(a) * 6, z: Math.sin(a) * 6, y: 0.2,
+      vx: Math.cos(a) * sp, vz: Math.sin(a) * sp, vy: sp * (0.12 + Math.random() * 0.3),
+      a: 0.3 + Math.random() * 0.5, tail: 0.03 + Math.random() * 0.03, x0: f.x,
+    });
+  }
+}
+
+export function bump(r, k = 3, f = null) {
+  if (f && k > 4) kick(r, f, 90, 0.5); // a hard landing kicks up a little soil
+  if (!still()) r.shake = Math.max(r.shake, k);
+}
 // People who've asked their phone for less motion get no camera shake.
 const still = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
