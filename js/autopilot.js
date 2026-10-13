@@ -20,7 +20,8 @@ export function goodAt(g, x, veh, strict = true) {
 // as it can be, without asking for a turn back that the fuel won't stand.
 export function chooseSpot(site, g, veh, from = site.start, margin = 5) {
   const step = 2;
-  const lo = g.x0 + veh.half + 20, hi = g.x1 - veh.half - 20;
+  const [x0, x1] = g.site || [g.x0, g.x1]; // the site itself, not the country beyond it
+  const lo = x0 + veh.half + 20, hi = x1 - veh.half - 20;
   const brake = G_MOON * Math.tan(15 * DEG);
   const stop = from.x + (Math.sign(from.vx || 0) * from.vx * from.vx) / (2 * brake);
   let best = null;

@@ -5,6 +5,8 @@
 import { rng, between, powerSize } from './rng.js';
 
 export const STEP = 1; // feet between height samples
+// Plain country before and after each site, so wherever you fly there's ground under you.
+export const BEYOND = [2000, 8000];
 
 const smooth = u => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
 
@@ -18,8 +20,10 @@ export function buildGround(spec) {
   const inClear = (x, pad = 0) => clear.some(([a, b]) => x > a - pad && x < b + pad);
 
   // Long, gentle rolls of the ground.
+  const rolls = [];
   for (const [amp, wl] of spec.roll || []) {
     const ph = R() * Math.PI * 2;
+    rolls.push([amp, wl, ph]);
     for (let i = 0; i < n; i++) h[i] += amp * Math.sin((X(i) * 2 * Math.PI) / wl + ph);
   }
   // Small bumps, so no stretch is perfectly flat.
@@ -75,20 +79,72 @@ export function buildGround(spec) {
       boulders.push(makeBoulder(x, powerSize(R, f.min, f.max, f.k || 2.3), null, R));
     }
   }
+  // The country beyond both ends.
+  const far = beyond(spec, h, x0, n, rolls, boulders);
   boulders.sort((a, b) => a.x - b.x);
 
   const g = {
-    x0, x1, n, h, boulders,
+    x0: far.x0, x1: far.x0 + (far.n - 1) * STEP, n: far.n, h: far.h, boulders,
+    site: [x0, x0 + (n - 1) * STEP], // the site itself, without the country beyond
     sun: spec.sun || 10,
     labels: craters.filter(c => c.name).map(c => ({ x: c.x, name: c.name, r: c.r })).concat(spec.labels || []),
-    top: new Float32Array(n),
-    lit: new Uint8Array(n),
-    alb: new Float32Array(n),
+    top: new Float32Array(far.n),
+    lit: new Uint8Array(far.n),
+    alb: new Float32Array(far.n),
   };
   for (const b of boulders) b.base = groundAt(g, b.x) - b.h * 0.12;
   computeTop(g);
   computeLight(g, R);
   return g;
+}
+
+// Past the ends of a site the ground carries on: the site's long rolls and its big features (a ramp
+// stays up, Hadley Rille has a far wall), small bumps and pits and a few stones, joined smoothly to the
+// end of the site. It all comes from its own random numbers, so the site itself is exactly as before.
+function beyond(spec, h, x0, n, rolls, boulders) {
+  const before = Math.round(BEYOND[0] / STEP), after = Math.round(BEYOND[1] / STEP);
+  const N = n + before + after, X0 = x0 - before * STEP, xEnd = x0 + (n - 1) * STEP;
+  const H = new Float32Array(N);
+  H.set(h, before);
+  const F = rng(((spec.seed || 1) * 7919 + 13) >>> 0);
+  const shape = x => {
+    let v = 0;
+    for (const [amp, wl, ph] of rolls) v += amp * Math.sin((x * 2 * Math.PI) / wl + ph);
+    for (const r of spec.ramps || []) v += r.dh * smooth((x - r.x0) / (r.x1 - r.x0));
+    for (const m of spec.mounds || []) { const u = (x - m.x) / m.w; if (u > -1 && u < 1) v += m.dh * Math.pow(Math.cos((u * Math.PI) / 2), 2); }
+    if (spec.rille) {
+      const u = (x - spec.rille.x0) / spec.rille.width;
+      if (u > 0) v -= spec.rille.depth * smooth(Math.min(1, u / 0.32)) * (u < 1 ? 1 : smooth(1 - (u - 1) / 0.32));
+    }
+    return v;
+  };
+  const left = new Float32Array(before), right = new Float32Array(after);
+  for (const [amp, wl] of spec.bumps || []) { addNoise(left, 0, amp, wl, F); addNoise(right, 0, amp, wl, F); }
+  const a0 = shape(x0), a1 = shape(xEnd);
+  for (let i = 0; i < before; i++) {
+    const x = X0 + i * STEP;
+    H[i] = h[0] + shape(x) - a0 + left[before - 1 - i] * smooth((x0 - x) / 150);
+  }
+  for (let j = 0; j < after; j++) {
+    const x = xEnd + (j + 1) * STEP;
+    H[before + n + j] = h[n - 1] + shape(x) - a1 + right[j] * smooth((x - xEnd) / 150);
+  }
+  // Small craters and a few stones, none of them reaching into the site.
+  const clearOfSite = (x, reach) => x < x0 - reach || x > xEnd + reach;
+  for (const [a, b] of [[X0, x0], [xEnd, xEnd + after * STEP]]) {
+    if (spec.pits) {
+      const { per1000, min, max } = spec.pits;
+      for (let k = Math.round(((b - a) / 1000) * per1000); k > 0; k--) {
+        const r = powerSize(F, min, Math.min(max, 30), 2.4), x = between(F, a, b);
+        if (clearOfSite(x, 2 * r + 20)) carveCrater(H, X0, N, { x, r, d: r * between(F, 0.14, 0.24), rim: r * between(F, 0.03, 0.07) });
+      }
+      for (let k = Math.round(((b - a) / 1000) * 6); k > 0; k--) {
+        const x = between(F, a, b), size = powerSize(F, 0.4, 2.6, 2.3);
+        if (clearOfSite(x, 40)) boulders.push(makeBoulder(x, size, null, F));
+      }
+    }
+  }
+  return { h: H, x0: X0, n: N };
 }
 
 // Value noise: random heights every wl feet, joined smoothly.

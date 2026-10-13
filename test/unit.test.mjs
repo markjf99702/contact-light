@@ -90,6 +90,31 @@ test('a spot to land: level, sloped, or with a rock under a footpad', () => {
   assert.equal(spotAt(big, 0, lm).bodyHit, true);
 });
 
+test('the ground goes on past both ends of every site', () => {
+  for (const s of SITES) {
+    const g = buildGround({ ...s.ground, sun: s.sun });
+    const [a, b] = g.site;
+    assert.deepEqual([a, b], s.ground.span, `${s.id}: the site itself`);
+    assert.ok(g.x0 <= a - 2000 && g.x1 >= b + 8000, `${s.id}: ${g.x0} to ${g.x1}`);
+    // Joined to the site without a step, with some shape to it, and a few stones on the Moon.
+    near(groundAt(g, b + 1), groundAt(g, b), 0.5, `${s.id}: no step at the far end`);
+    near(groundAt(g, a - 1), groundAt(g, a), 0.5, `${s.id}: no step at the near end`);
+    if (s.training) continue;
+    const hs = [];
+    for (let x = b + 500; x < b + 4000; x += 5) hs.push(groundAt(g, x));
+    const mean = hs.reduce((p, q) => p + q) / hs.length, sd = Math.sqrt(hs.reduce((p, q) => p + (q - mean) ** 2, 0) / hs.length);
+    assert.ok(sd > 0.3, `${s.id}: the country beyond isn't a flat floor (${sd.toFixed(2)})`);
+    assert.ok(g.boulders.some(q => q.x > b + 100) && g.boulders.some(q => q.x < a - 100), `${s.id}: stones beyond both ends`);
+    // The autopilot still picks its spot on the site itself.
+    const x = chooseSpot(s, g, VEHICLES.lm);
+    assert.ok(x > a && x < b, `${s.id}: spot at ${x}`);
+  }
+  // Hadley Rille has a far wall.
+  const a15 = siteById('a15'), g = buildGround({ ...a15.ground, sun: a15.sun });
+  assert.ok(groundAt(g, 4600) < groundAt(g, 1000) - 700, 'deep in the rille at the end of the site');
+  assert.ok(groundAt(g, 8500) > groundAt(g, 4600) + 700, 'and out the far side');
+});
+
 // ---------- the flight model ----------
 
 test('P66 holds the rate you click, a foot per second a click', () => {

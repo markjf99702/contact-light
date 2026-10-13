@@ -80,9 +80,18 @@ export function drawProfile(canvas, g, site, o = {}) {
   const px = clamp(X(lx), 3, w - 3), py = clamp(Y(ly), 4, h - 2);
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.moveTo(px, py - 4);
-  ctx.lineTo(px + 4, py + 3);
-  ctx.lineTo(px - 4, py + 3);
+  const off = X(lx) > w - 3 ? 1 : X(lx) < 3 ? -1 : 0;
+  if (off) {
+    // Flown off the end of the strip: an arrow at that end, pointing the way you went.
+    const ex = off > 0 ? w - 1 : 1;
+    ctx.moveTo(ex, py);
+    ctx.lineTo(ex - off * 7, py - 4.5);
+    ctx.lineTo(ex - off * 7, py + 4.5);
+  } else {
+    ctx.moveTo(px, py - 4);
+    ctx.lineTo(px + 4, py + 3);
+    ctx.lineTo(px - 4, py + 3);
+  }
   ctx.closePath();
   ctx.fill();
   if (o.start) {

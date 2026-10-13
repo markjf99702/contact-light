@@ -157,15 +157,13 @@ function earth(r, sc) {
 function buildBackdrop(site) {
   const R = rng(site.ground.seed * 7 + 3);
   const layers = [];
+  // A ridge is a sum of waves, so it can be drawn for whatever stretch is on screen, however far you fly.
   const ridge = (n, span, amp, wl, base, p, col, lit) => {
-    const pts = [];
     const ph = [R() * 6, R() * 6, R() * 6];
-    for (let k = 0; k <= n; k++) {
-      const x = -span + (2 * span * k) / n;
-      let h = base + amp * (0.55 * Math.sin(x / wl + ph[0]) + 0.3 * Math.sin(x / (wl * 0.37) + ph[1]) + 0.15 * Math.sin(x / (wl * 0.13) + ph[2]));
-      pts.push([x, Math.max(0, h)]);
-    }
-    layers.push({ pts, p, col, lit });
+    const height = x => Math.max(0, base + amp * (0.55 * Math.sin(x / wl + ph[0]) + 0.3 * Math.sin(x / (wl * 0.37) + ph[1]) + 0.15 * Math.sin(x / (wl * 0.13) + ph[2])));
+    let top = 0;
+    for (let k = 0; k <= n; k++) top = Math.max(top, height(-span + (2 * span * k) / n));
+    layers.push({ ridge: true, height, gap: (2 * span) / n, top, p, col, lit });
   };
   if (site.world === 'earth') {
     layers.push({ earth: true });
@@ -214,12 +212,16 @@ function backdrop(r, sc) {
       continue;
     }
     const X = x => r.ox + (x - cam.cx * L.p) * bs;
+    // The points on screen, on the ridge's own spacing so they don't shimmer as it slides.
+    const u0 = Math.floor((cam.cx * L.p - r.ox / bs) / L.gap) - 1, u1 = Math.ceil((cam.cx * L.p + (W - r.ox) / bs) / L.gap) + 1;
+    const pts = [];
+    for (let u = u0; u <= u1; u++) pts.push([u * L.gap, L.height(u * L.gap)]);
     ctx.beginPath();
-    ctx.moveTo(X(L.pts[0][0]), base + 400);
-    for (const [x, h] of L.pts) ctx.lineTo(X(x), base - h * bs);
-    ctx.lineTo(X(L.pts[L.pts.length - 1][0]), base + 400);
+    ctx.moveTo(X(pts[0][0]), base + 400);
+    for (const [x, h] of pts) ctx.lineTo(X(x), base - h * bs);
+    ctx.lineTo(X(pts[pts.length - 1][0]), base + 400);
     ctx.closePath();
-    const top = Math.max(...L.pts.map(p => p[1]));
+    const top = L.top;
     const gr = ctx.createLinearGradient(0, base - top * bs, 0, base + 40);
     const f = Math.min(0.98, (top * bs) / (top * bs + 40));
     gr.addColorStop(0, rgb(L.lit, 0.82));
@@ -232,8 +234,8 @@ function backdrop(r, sc) {
     ctx.lineWidth = Math.max(1, bs * 1.6);
     ctx.strokeStyle = rgb(L.lit, 1.1);
     ctx.beginPath();
-    for (let k = 1; k < L.pts.length; k++) {
-      const [x0, h0] = L.pts[k - 1], [x1, h1] = L.pts[k];
+    for (let k = 1; k < pts.length; k++) {
+      const [x0, h0] = pts[k - 1], [x1, h1] = pts[k];
       if (h1 > h0 + 0.4) { ctx.moveTo(X(x0), base - h0 * bs); ctx.lineTo(X(x1), base - h1 * bs); }
     }
     ctx.stroke();
@@ -344,7 +346,8 @@ function earthBackdrop(r, base, bs) {
   ctx.fillStyle = '#6f8a6a';
   ctx.beginPath();
   ctx.moveTo(-10, base + 50);
-  for (let x = -2600; x <= 2600; x += 18) ctx.lineTo(X(x), base - (10 + 5 * Math.sin(x * 0.07) + 3 * Math.sin(x * 0.23)) * bs);
+  const t0 = Math.floor((cam.cx * 0.2 - r.ox / bs) / 18) * 18 - 18, t1 = cam.cx * 0.2 + (W - r.ox) / bs + 18;
+  for (let x = t0; x <= t1; x += 18) ctx.lineTo(X(x), base - (10 + 5 * Math.sin(x * 0.07) + 3 * Math.sin(x * 0.23)) * bs);
   ctx.lineTo(W + 10, base + 50);
   ctx.closePath();
   ctx.fill();
@@ -389,11 +392,14 @@ function terrain(r, sc) {
   const { g, site } = sc;
   const [xa, xb] = visibleRange(r);
   const stride = Math.max(1, Math.ceil(1.5 / (cam.s * STEP)));
-  const i0 = clamp(Math.floor((xa - g.x0) / STEP), 0, g.n - 1), i1 = clamp(Math.ceil((xb - g.x0) / STEP), 0, g.n - 1);
+  // Indices can run past the ends of the ground (thousands of feet beyond a site): there it goes on
+  // level at the height it ended, rather than stopping.
+  const i0 = Math.floor((xa - g.x0) / STEP), i1 = Math.max(i0 + 1, Math.ceil((xb - g.x0) / STEP));
   const idx = [];
   for (let i = i0; i <= i1; i += stride) idx.push(i);
   if (idx[idx.length - 1] !== i1) idx.push(i1);
-  const sx = i => X(g.x0 + i * STEP), sy = i => Y(g.h[i]);
+  const at = i => clamp(i, 0, g.n - 1);
+  const sx = i => X(g.x0 + i * STEP), sy = i => Y(g.h[at(i)]);
   const pal = site.palette;
   const band = r.band;
 
@@ -422,7 +428,7 @@ function terrain(r, sc) {
     const i = idx[k], j = idx[k + 1];
     // Zoomed out, a segment spans several samples: average them, or the strip breaks into blocks.
     let sh = 0;
-    for (let q = i; q < Math.max(i + 1, j); q++) sh += shadeAt(g, q, sinS, cosS);
+    for (let q = i; q < Math.max(i + 1, j); q++) sh += shadeAt(g, at(q), sinS, cosS);
     sh /= Math.max(1, j - i);
     const lv = Math.min(LEVELS - 1, Math.round((sh / 1.4) * (LEVELS - 1)));
     const p = paths[lv];

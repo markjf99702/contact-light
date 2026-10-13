@@ -170,6 +170,24 @@ try {
   assert.match(await page.textContent('#rTip'), /tilt back until FWD reads 0/);
   assert.doesNotMatch(await page.textContent('#loopList'), /looking good/i, 'nobody said it was going well');
 
+  // ---------- far past the end of the site ----------
+  // Fly on past everything at Tranquility Base: there's still lit ground under the LM, not a void.
+  await page.evaluate(() => { window.contactLight.fly('a11'); window.contactLight.hold({ rod: 13 }); });
+  await page.waitForTimeout(200);
+  await page.evaluate(() => { window.contactLight.hold({ pad: 0.6 }); window.contactLight.speed(8); });
+  await until(() => window.contactLight.state().x > 4800);
+  await page.evaluate(() => { window.contactLight.speed(0); window.contactLight.hold({ pad: 0 }); });
+  await page.waitForTimeout(200);
+  const ground = await page.evaluate(() => {
+    const c = document.getElementById('scene'), y = document.getElementById('panel').getBoundingClientRect().top - 30;
+    const d = c.getContext('2d').getImageData(0, Math.round(y * c.width / innerWidth), c.width, 1).data;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4) sum += (d[i] + d[i + 1] + d[i + 2]) / 3;
+    return sum / (d.length / 4);
+  });
+  assert.ok(ground > 50, `lit ground past the end of the site (brightness ${ground.toFixed(0)})`);
+  await page.evaluate(() => window.contactLight.speed(1));
+
   // ---------- out of fuel ----------
   await page.evaluate(() => { window.contactLight.fly('a14'); window.contactLight.setFuel(0.3); window.contactLight.speed(3); });
   await until(() => window.contactLight.state().lines.some(l => /Antares, Houston\. We copy the abort\./.test(l)));
