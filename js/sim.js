@@ -188,6 +188,8 @@ function touchdown(f, ev) {
   f.record = {
     down: Math.max(0, -f.vy),
     side: Math.abs(f.vx),
+    fwd: f.vx,
+    mode: f.mode,
     tilt: Math.abs(f.th / DEG),
     slope: Math.abs(spot.slope),
     rest: Math.abs(spot.rest),
@@ -215,7 +217,7 @@ function touchdown(f, ev) {
 function strike(f, ev) {
   f.touchAt = f.t;
   f.record = {
-    down: Math.max(0, -f.vy), side: Math.abs(f.vx), tilt: Math.abs(f.th / DEG),
+    down: Math.max(0, -f.vy), side: Math.abs(f.vx), fwd: f.vx, mode: f.mode, tilt: Math.abs(f.th / DEG),
     slope: Math.abs(spotAt(f.g, f.x, f.veh).slope), rest: 90, rock: 0, bellHit: true, bodyHit: true,
     x: f.x, dist: Math.abs(f.x - f.site.target.x), fuelPct: pct(f), fuelSec: hoverSeconds(f),
     clock: fuelClock(f), time: f.t, contact: f.contactAt != null, struck: true,
@@ -237,14 +239,17 @@ export function fuelClock(f) {
 
 // ---------- what happens after the footpads touch (or it all goes wrong) ----------
 
-// The game decides how it went (judge.js) and tells the flight which ending to show.
-export function finish(f, outcome) {
+// The game decides how it went (judge.js) and tells the flight which ending to show. why says what
+// tipped it over: 'side' (still moving), 'tilt' (leaning), 'slope' or 'rock'.
+export function finish(f, outcome, why) {
   if (outcome === 'landed') return; // settling carries on into landed
   if (outcome === 'tipped') {
     f.phase = 'tipping';
-    // Over toward the low side, or the way it was moving when the footpads caught.
-    const lean = f.restTh || 0;
-    f.tipDir = Math.abs(lean) > 3 * DEG ? Math.sign(lean) : Math.sign(f.vxAtTouch || f.th || 1);
+    // Over the way it was moving or leaning if that's what did it, otherwise toward the low side.
+    const lean = f.restTh || 0, moving = Math.sign(f.vxAtTouch || f.th || 1);
+    f.tipDir = why === 'side' ? moving
+      : why === 'tilt' ? Math.sign(f.th || moving)
+      : Math.abs(lean) > 0.5 * DEG ? Math.sign(lean) : moving;
     f.end = { t: 0, from: { y: f.y, th: f.th, x: f.x } };
   } else crash(f);
 }
@@ -264,7 +269,7 @@ function abort(f, ev, why) {
   f.asc = { x: f.x, y: f.y + 6, vx: f.vx, vy: f.vy, th: f.th, t: 0 };
   f.end = { t: 0 };
   f.record = {
-    abort: why, down: 0, side: Math.abs(f.vx), tilt: Math.abs(f.th / DEG), slope: 0, rest: 0, rock: 0,
+    abort: why, down: 0, side: Math.abs(f.vx), fwd: f.vx, mode: f.mode, tilt: Math.abs(f.th / DEG), slope: 0, rest: 0, rock: 0,
     x: f.x, dist: Math.abs(f.x - f.site.target.x), fuelPct: pct(f), fuelSec: hoverSeconds(f), clock: fuelClock(f),
     time: f.t, alt: altitude(f), contact: false,
   };

@@ -288,7 +288,7 @@ function onEvent(c, e) {
       c.ended = true;
       c.endT = 0;
       if (e.type === 'touchdown') {
-        finish(f, j.outcome);
+        finish(f, j.outcome, j.why);
         if (j.outcome === 'crash') { burst(r, f); sound.play('crash'); sound.buzz([90, 40, 140]); }
         else if (e.record.down > 5) { bump(r, 6, f); sound.play('hard'); sound.buzz(70); }
         else { bump(r, 2); sound.play('thud'); sound.buzz(35); }
@@ -544,7 +544,10 @@ function showResult() {
   const rows = $('rRows');
   rows.replaceChildren(...j.rows.map(row => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${row.label}</td><td class="v">${row.value}${row.note ? `<small>${row.note}</small>` : ''}</td><td><span class="tier ${row.tier}">${row.tier === 'fail' ? 'no' : row.tier}</span></td>`;
+    // After a crash only what went wrong gets a mark: a gold beside a wreck reads as praise.
+    const pill = j.ok || row.tier === 'fail' ? `<span class="tier ${row.tier}">${row.tier === 'fail' ? 'no' : row.tier}</span>` : '';
+    tr.className = j.ok || row.tier === 'fail' ? '' : 'quiet';
+    tr.innerHTML = `<td>${row.label}</td><td class="v">${row.value}${row.note ? `<small>${row.note}</small>` : ''}</td><td>${pill}</td>`;
     return tr;
   }));
   rows.hidden = !j.rows.length;
@@ -552,7 +555,7 @@ function showResult() {
   let tip = j.tip;
   if (j.ok && j.tier !== 'gold') {
     const weak = j.rows.find(row => row.tier === j.tier);
-    tip = weak ? `For a better plaque: ${weak.label.toLowerCase()}, ${weak.need}.` : '';
+    tip = weak ? `For a better plaque, ${weak.need}.` : '';
   } else if (j.ok) tip = s.training ? 'You’re ready. Apollo 11 is next.' : '';
   $('rTip').textContent = tip;
   const i = SITES.indexOf(s);

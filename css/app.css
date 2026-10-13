@@ -233,6 +233,7 @@ details.how p { color: var(--ink2); font-size: 14px; margin: 8px 0 0; }
 .judging td.v { font-variant-numeric: tabular-nums; font-weight: 500; }
 .judging td.v small { display: block; font-family: var(--disp); color: var(--ink3); font-size: 11.5px; }
 .judging td:last-child { text-align: right; width: 22%; }
+.judging tr.quiet td { color: var(--ink3); }
 .tier { display: inline-block; padding: 2px 8px; border-radius: 999px; font: 700 10px var(--disp); letter-spacing: .1em; text-transform: uppercase; }
 .tier.gold { background: rgba(230, 193, 96, .2); color: var(--gold); }
 .tier.silver { background: rgba(207, 212, 216, .16); color: var(--silver); }

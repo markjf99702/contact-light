@@ -6,7 +6,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rng } from '../js/rng.js';
 import { buildGround, groundAt, surfaceAt, spotAt, litAt } from '../js/terrain.js';
-import { createFlight, step, altitude, pct, hoverSeconds, G_MOON, VEHICLES, ENGINE, LOW_LEVEL, BINGO_AFTER_LOW, FULL_LOAD } from '../js/sim.js';
+import { createFlight, step, finish, altitude, pct, hoverSeconds, G_MOON, VEHICLES, ENGINE, LOW_LEVEL, BINGO_AFTER_LOW, FULL_LOAD } from '../js/sim.js';
 import { judge, LIMITS } from '../js/judge.js';
 import { rateText, rateSay, altText, numbersCall, createRadio, radioUpdate, openingLines, endingLines, missionTime } from '../js/calls.js';
 import { createAutopilot, autopilotInput, chooseSpot } from '../js/autopilot.js';
@@ -203,6 +203,71 @@ test('past the LM\'s limits it crashes or tips over', () => {
   assert.equal(a.outcome, 'abort');
   assert.match(a.reason, /ran dry 80 ft up/);
   for (const o of [at({ down: 12 }), at({ side: 5 }), a]) assert.equal(o.tier, null);
+});
+
+test('the card judges the numbers it shows, so it never contradicts itself', () => {
+  const site = flatSite();
+  const row = (over, key) => judge(rec(over), site).rows.find(r => r.key === key);
+  // Fra Mauro: 3.09° used to show as "3°" and still cost the gold.
+  assert.deepEqual([row({ rest: 3.04 }, 'slope').value, row({ rest: 3.04 }, 'slope').tier], ['3.0° slope', 'gold']);
+  assert.deepEqual([row({ rest: 3.09 }, 'slope').value, row({ rest: 3.09 }, 'slope').tier], ['3.1° slope', 'silver']);
+  assert.deepEqual([row({ rock: 0.52 }, 'rock').value, row({ rock: 0.52 }, 'rock').tier], ['Clear', 'gold']);
+  assert.deepEqual([row({ rock: 0.56 }, 'rock').value, row({ rock: 0.56 }, 'rock').tier], ['0.6 ft rock under a pad', 'silver']);
+  assert.deepEqual([row({ down: 3.04 }, 'down').value, row({ down: 3.04 }, 'down').tier], ['3.0 ft/s', 'gold']);
+  assert.deepEqual([row({ tilt: 3.44 }, 'tilt').value, row({ tilt: 3.44 }, 'tilt').tier], ['3.4°', 'silver']);
+  // 4.04 ft/s along the ground shows as 4.0, which the legs take.
+  const j = judge(rec({ side: 4.04 }), site);
+  assert.equal(j.outcome, 'landed');
+  assert.equal(j.rows.find(r => r.key === 'side').tier, 'bronze');
+  // The speed along the ground is called what the numbers at the top call it.
+  assert.equal(row({ fwd: 0.6, side: 0.6 }, 'side').label, 'Forward');
+  assert.equal(row({ fwd: -0.6, side: 0.6 }, 'side').label, 'Back');
+  // Each number says what would earn the better plaque.
+  assert.match(row({ rest: 4 }, 'slope').need, /^find level ground, within 3°$/);
+});
+
+test('a crash card names everything that went wrong, and only that', () => {
+  const site = flatSite();
+  // Touch nothing at Tranquility Base: 14 ft/s down and still 58 ft/s forward.
+  const j = judge(rec({ down: 14, side: 58, fwd: 58, rest: 6, rock: 1.8 }), site);
+  assert.equal(j.title, 'Hard landing');
+  assert.match(j.reason, /14 ft\/s down while moving 58 ft\/s forward\. The legs were built for 10 coming straight down, and no more than 4 ft\/s along the ground\./);
+  assert.match(j.tip, /Click the rate up/);
+  assert.match(j.tip, /tilt back until FWD reads 0/);
+  assert.deepEqual(j.rows.filter(r => r.tier === 'fail').map(r => r.key), ['down', 'side']);
+  // In Arcade there's no rate switch to click.
+  assert.match(judge(rec({ down: 14, mode: 'arcade' }), site).tip, /Push the throttle up/);
+  // A descent stage that hit first never stood on its footpads, so there's no slope or rock to judge.
+  const struck = judge(rec({ struck: true, rest: 90, bellHit: true, bodyHit: true }), site);
+  assert.equal(struck.title, 'Crashed');
+  assert.deepEqual(struck.rows.map(r => r.key), ['down', 'side', 'tilt', 'dist', 'fuel']);
+  // What tipped it over decides which way it goes.
+  assert.equal(judge(rec({ side: 6 }), site).why, 'side');
+  assert.equal(judge(rec({ rest: 14 }), site).why, 'slope');
+  assert.equal(judge(rec({ tilt: 14 }), site).why, 'tilt');
+});
+
+test('a tipped LM falls the way its trouble pushed it', () => {
+  // Ground rising ahead, about 4° under the footpads, and touching down still moving 6 ft/s forward:
+  // it goes over forward, the way it was moving, not back down the slope.
+  const site = flatSite({ ground: { span: [-2000, 4000], seed: 5, ramps: [{ x0: -300, x1: 300, dh: 28 }] }, start: { x: 0, alt: 9, vx: 6, vy: -2 } });
+  const f = createFlight(site, flatGround(site));
+  const down = fly(f, { pad: 0 }, 10).find(e => e.type === 'touchdown');
+  assert.ok(down, 'it came down');
+  const j = judge(down.record, site);
+  assert.ok(down.record.rest > 3, `on a slope (${down.record.rest.toFixed(1)}°)`);
+  assert.equal(j.why, 'side');
+  finish(f, j.outcome, j.why);
+  fly(f, {}, 3);
+  assert.ok(f.th > 1.2, `over forward (${(f.th * 180 / Math.PI).toFixed(0)}°)`);
+  // Standing still on a slope too steep, it goes over toward the low side.
+  const g = createFlight({ ...site, start: { x: 0, alt: 3, vx: 0, vy: -1 }, ground: { span: [-2000, 4000], seed: 5, ramps: [{ x0: -60, x1: 60, dh: 28 }] } }, buildGround({ span: [-2000, 4000], seed: 5, ramps: [{ x0: -60, x1: 60, dh: 28 }] }));
+  const d2 = fly(g, { pad: 0 }, 6).find(e => e.type === 'touchdown');
+  const j2 = judge(d2.record, site);
+  assert.equal(j2.why, 'slope');
+  finish(g, j2.outcome, j2.why);
+  fly(g, {}, 3);
+  assert.ok(g.th < -1.2, 'over down the slope, to the left');
 });
 
 // ---------- the radio ----------
