@@ -502,7 +502,7 @@ function pause() {
   const s = cur.site;
   $('pauseMeta').textContent = s.free ? `Free flight · ground ${s.seed}` : `${s.name} · ${s.place}`;
 }
-function resume() { if (screen === 'paused') { show('flight'); last = performance.now(); } }
+function resume() { if (screen === 'paused') { sound.unlock(); show('flight'); last = performance.now(); } }
 $('menuBtn').addEventListener('click', pause);
 $('resumeBtn').addEventListener('click', resume);
 $('restartBtn').addEventListener('click', () => startFlight(cur.site, cur.mode));
@@ -594,6 +594,7 @@ for (const id of ['voiceBtn', 'voiceBtn2']) {
   $(id).addEventListener('click', () => {
     store.settings.voice = !store.settings.voice;
     sound.setVoice(store.settings.voice);
+    sound.unlock();
     save(store);
     renderSettings();
   });

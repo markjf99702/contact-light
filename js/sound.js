@@ -21,6 +21,7 @@ export const canSpeak = () => typeof window !== 'undefined' && 'speechSynthesis'
 
 // Browsers only allow sound after the person has touched or pressed something.
 export function unlock() {
+  primeSpeech();
   if (!ac) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
@@ -36,7 +37,9 @@ export function unlock() {
     let v = 0;
     for (let i = 0; i < d.length; i++) { v = (v + (Math.random() * 2 - 1) * 0.08) * 0.985; d[i] = v * 3; }
   }
-  if (ac.state === 'suspended') ac.resume();
+  // Suspended until a tap allows it, or 'interrupted' on an iPhone after a call or a trip to the home
+  // screen: either way, try again now.
+  if (ac.state !== 'running' && ac.resume) Promise.resolve(ac.resume()).catch(() => {});
 }
 
 function out(node) { node.connect(master); }
@@ -126,6 +129,19 @@ export function radioLine(l) {
     setTimeout(() => play('quindarOut'), end * 1000);
   }
   return dur;
+}
+
+// iPhones only let a page speak once it has spoken during a tap, so say nothing, quietly, the first
+// time there's a tap with the voice on; after that the calls can speak whenever they come.
+let primed = false;
+function primeSpeech() {
+  if (primed || !voiceOn || !canSpeak()) return;
+  try {
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    speechSynthesis.speak(u);
+    primed = true;
+  } catch { /* no voice: the words are on screen anyway */ }
 }
 
 function loadVoices() {

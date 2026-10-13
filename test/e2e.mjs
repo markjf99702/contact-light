@@ -1,6 +1,7 @@
 // Flies Contact Light in Chromium through the real page:  node test/e2e.mjs  (needs Playwright)
 // Learns the controls at Ellington with real taps and drags, lands at Tranquility Base, crashes,
-// aborts, tries Arcade and Free flight, checks the plaques are kept, and plays once more offline.
+// aborts, tries Arcade and Free flight, checks the plaques are kept, plays once more offline, and
+// has the calls read aloud.
 // It ends with the checks every junkdrawer.works project wants.
 import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
@@ -249,6 +250,36 @@ try {
   await dp.keyboard.up('ArrowLeft');
   await dp.waitForFunction(() => Math.abs(window.contactLight.state().th) < 1);
   await desk.close();
+
+  // ---------- reading the calls aloud ----------
+  // The browser's voice is swapped for a recorder. An iPhone only lets a page speak once it has
+  // spoken during a tap, so the first thing said has to be said in one.
+  const vc = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await vc.addInitScript(() => {
+    window.said = [];
+    const voice = {
+      speaking: false, pending: false, onvoiceschanged: null,
+      speak(u) { window.said.push({ text: u.text, volume: u.volume, during: window.event ? window.event.type : null }); },
+      cancel() { window.said.push({ cancel: true }); },
+      getVoices() { return []; },
+    };
+    Object.defineProperty(window, 'speechSynthesis', { value: voice, configurable: true });
+  });
+  const vp = await vc.newPage();
+  watch(vp);
+  await vp.goto(base);
+  await vp.waitForFunction(() => window.contactLight && window.contactLight.demo());
+  await vp.tap('#voiceBtn');
+  assert.equal(await vp.getAttribute('#voiceBtn', 'aria-pressed'), 'true');
+  assert.deepEqual(await vp.evaluate(() => window.said.find(s => 'text' in s)), { text: ' ', volume: 0, during: 'click' }, 'the voice is woken during the tap');
+  await vp.tap('[data-site=a11]');
+  await vp.tap('#goBtn');
+  await vp.waitForFunction(() => window.said.some(s => /^Eagle, Houston/.test(s.text || '')), null, LONG);
+  await vp.tap('#menuBtn');
+  const saidBefore = await vp.evaluate(() => window.said.length);
+  await vp.tap('#voiceBtn2');
+  assert.ok(await vp.evaluate(n => window.said.slice(n).some(s => s.cancel), saidBefore), 'turning the voice off stops it');
+  await vc.close();
 
   assert.deepEqual(problems.filter(p => !p.startsWith('failed:')), [], 'no errors, and nothing loaded from anywhere else');
 } finally {
