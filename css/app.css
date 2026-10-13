@@ -176,6 +176,7 @@ button:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px soli
 /* The title: the attract flight shows above, the card holds the sites. */
 .sheet.title { flex-direction: column; justify-content: flex-start; align-items: center; }
 .brand { text-align: center; margin: 2px 0 0; max-width: 440px; text-shadow: 0 2px 16px rgba(0, 0, 0, .9); }
+@media (min-width: 760px) { .brand { max-width: 620px; } }
 .brand h1 { margin: 10px 0 4px; font: 600 31px/1 var(--disp); letter-spacing: .19em; text-transform: uppercase; padding-left: .19em; white-space: nowrap; }
 .lede { margin: 0; color: var(--ink2); font-size: 15px; }
 .lamp-mark {
@@ -260,18 +261,35 @@ details.how p { color: var(--ink2); font-size: 14px; margin: 8px 0 0; }
   .skip { bottom: calc(176px + var(--safe-b)); }
 }
 @media (min-width: 760px) and (min-height: 700px) { .ro b { font-size: 26px; } }
-/* Short screens (a phone on its side): tighter all round. */
-@media (max-height: 520px) {
-  .readouts { padding: 3px 8px 4px; }
-  .ro b { font-size: 18px; }
-  .strip { height: 20px; margin-top: 4px; }
-  .radio { min-height: 0; font-size: 11.5px; }
-  .radio p.older { display: none; }
+/* A phone on its side: the numbers in one slim row, the rate switch and hand controller in the bottom
+   corners under your thumbs, the lamps between them, and the flight in the middle. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .hud { padding-top: calc(4px + var(--safe-t)); padding-left: calc(10px + env(safe-area-inset-left, 0px)); padding-right: calc(10px + env(safe-area-inset-right, 0px)); }
+  .hud-row { position: absolute; left: calc(10px + env(safe-area-inset-left, 0px)); top: calc(5px + var(--safe-t)); min-height: 0; }
+  .hud-name { display: none; }
+  .clock { position: absolute; right: calc(14px + env(safe-area-inset-right, 0px)); top: calc(54px + var(--safe-t)); }
+  .readouts { margin: 0 0 0 50px; padding: 3px 10px 4px; }
+  .ro { grid-template-columns: auto auto auto; align-items: baseline; gap: 6px; }
+  .ro b { font-size: 19px; }
+  .strip { height: 18px; margin-top: 4px; }
+  .radio { min-height: 0; font-size: 11.5px; margin-top: 4px; }
+  .radio p.old, .radio p.older { display: none; }
+  .panel {
+    background: none; border: 0; pointer-events: none; align-items: end; gap: 12px;
+    grid-template-columns: 132px 1fr 250px; padding: 0 calc(12px + env(safe-area-inset-right, 0px)) calc(8px + var(--safe-b)) calc(12px + env(safe-area-inset-left, 0px));
+  }
+  .panel > * { pointer-events: auto; }
+  .rod, .lever, .aca { padding: 8px; border-radius: 14px; background: rgba(16, 18, 20, .86); border: 1px solid rgba(255, 255, 255, .08); }
+  .rod { grid-template-columns: 1fr; }
   .rod-btn { height: 40px; }
-  .lamp { height: 38px; }
-  .aca-track { height: 64px; }
-  .lever-track { height: 96px; }
-  .coach, .skip { bottom: calc(126px + var(--safe-b)); }
+  .lamps { grid-template-columns: 1fr 1fr; width: 190px; justify-self: center; }
+  .lamp { height: 36px; }
+  .aca-track { height: 62px; }
+  .lever { grid-column: 1; }
+  .lever-track { height: 92px; }
+  .keys { display: none !important; }
+  .coach { bottom: calc(60px + var(--safe-b)); }
+  .skip { bottom: calc(60px + var(--safe-b)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .card { backdrop-filter: none; -webkit-backdrop-filter: none; }

@@ -182,10 +182,12 @@ function layout() {
   resizeRenderer(r, innerWidth, innerHeight);
   if (!$('hud').hidden) {
     const hb = $('hud').getBoundingClientRect().bottom;
-    let pt = $('panel').getBoundingClientRect().top;
+    // On a phone on its side the controls sit in the corners, so the flight runs down to the lamps.
+    const corners = matchMedia('(orientation: landscape) and (max-height: 520px)').matches;
+    let pt = (corners ? $('panel').querySelector('.lamps') : $('panel')).getBoundingClientRect().top - (corners ? 6 : 0);
     // Training's hints sit just above the panel: keep the ground clear of them.
     if (cur && cur.coach) pt -= 92;
-    view = { top: Math.max(0, hb - 34), bottom: Math.max(hb + 120, pt) };
+    view = { top: Math.max(0, hb - (corners ? 0 : 34)), bottom: Math.max(hb + 120, pt) };
   } else if (screen === 'title' && innerWidth < 760) {
     const sheet = $('title'), keep = sheet.scrollTop;
     sheet.scrollTop = 0;
@@ -194,7 +196,7 @@ function layout() {
     sheet.scrollTop = keep;
     view = { top: top - 10, bottom: Math.max(top + 160, bottom + 30) };
   } else if (screen === 'title') {
-    view = { top: 40, bottom: innerHeight - 30, shift: Math.min(260, innerWidth * 0.18) };
+    view = { top: 40, bottom: innerHeight - 30, shift: Math.min(300, innerWidth * 0.2), lead: 0.25 };
   } else if (screen === 'brief' && innerWidth < 760) {
     view = { top: 0, bottom: innerHeight * 0.42 };
   } else view = { top: 20, bottom: innerHeight - 20 };

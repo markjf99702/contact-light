@@ -70,7 +70,7 @@ function camera(r, sc) {
   const alt = Math.max(0, fy - f.veh.cg - groundAt(g, fx));
   const viewFt = clamp(alt * 1.38 + 74, 100, 1100);
   let s = Math.min(sceneH / viewFt, r.W / 96);
-  const lead = clamp((f.phase === 'flying' ? f.vx : 0) / 50, -1, 1) * 0.26;
+  const lead = clamp((f.phase === 'flying' ? f.vx : 0) / 50, -1, 1) * 0.26 * (view.lead ?? 1);
   // Low down, sit the LM a little left of centre: its shadow falls ahead, to the right.
   const low = clamp((90 - alt) / 60, 0, 1) * (1 - clamp(Math.abs(f.vx) / 12, 0, 1)) * 0.12;
   const cx = fx + ((lead + low) * r.W) / s;
@@ -242,7 +242,8 @@ function massifLayer(ctx, L, X, base, bs) {
   outline.closePath();
   for (let k = 1; k < L.pts.length; k++) {
     const [x0, h0] = L.pts[k - 1], [x1, h1] = L.pts[k];
-    const slope = (h1 - h0) / Math.max(1, x1 - x0);
+    const a0 = L.pts[Math.max(0, k - 5)], a1 = L.pts[Math.min(L.pts.length - 1, k + 4)];
+    const slope = (a1[1] - a0[1]) / Math.max(1, a1[0] - a0[0]);
     const t = clamp(0.42 + slope * 1.6, 0, 1);
     const lv = Math.round(t * (LEVELS - 1));
     const a = X(x0) - 0.5, b = X(x1) + 0.5;
@@ -807,6 +808,21 @@ function dust(r, sc) {
     for (let k = bot.length - 1; k >= 0; k--) ctx.lineTo(bot[k][0], bot[k][1]);
     ctx.closePath();
     ctx.fill();
+    // And over the ground in front: close in, the surface fades out altogether.
+    const cy = r.Y(groundAt(g, gx)) + band;
+    const rx = Math.max(40, R * cam.s * 0.9), ry = Math.min(r.H - cy + 40, 30 + I * 170);
+    ctx.save();
+    ctx.translate(X(gx), cy);
+    ctx.scale(1, ry / rx);
+    const cl = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+    cl.addColorStop(0, `rgba(${c},${Math.min(0.85, a * 0.95)})`);
+    cl.addColorStop(0.55, `rgba(${c},${a * 0.45})`);
+    cl.addColorStop(1, `rgba(${c},0)`);
+    ctx.fillStyle = cl;
+    ctx.beginPath();
+    ctx.arc(0, 0, rx, 0, Math.PI);
+    ctx.fill();
+    ctx.restore();
   }
 }
 
@@ -918,6 +934,27 @@ function craft(r, sc) {
   pose(f.x, f.y, f.th);
   drawLM(ctx, { probes, detail, engine: f.phase === 'flying' ? f.thr : 0 });
   ctx.restore();
+  // Contact: a glint where the probe touched, for the moment the lamp comes on.
+  if (f.contactAt != null && f.t - f.contactAt < 0.9) {
+    const k = 1 - (f.t - f.contactAt) / 0.9;
+    let best = null;
+    for (const px of f.veh.probes) {
+      const [wx, wy] = toWorld(f, px, -f.veh.probe);
+      const d = wy - groundAt(sc.g, wx);
+      if (!best || d < best.d) best = { wx, wy: Math.min(wy, groundAt(sc.g, wx) + 0.2), d };
+    }
+    if (best) {
+      const gx = X(best.wx), gy = Y(best.wy), rad = 6 + 30 * k * Math.min(1, cam.s / 3);
+      const gl = ctx.createRadialGradient(gx, gy, 0, gx, gy, rad);
+      gl.addColorStop(0, `rgba(230, 246, 255, ${0.95 * k})`);
+      gl.addColorStop(0.3, `rgba(85, 186, 255, ${0.6 * k})`);
+      gl.addColorStop(1, 'rgba(85, 186, 255, 0)');
+      ctx.fillStyle = gl;
+      ctx.beginPath();
+      ctx.arc(gx, gy, rad, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 }
 
 // ---------- the footprint: where the footpads will come down ----------

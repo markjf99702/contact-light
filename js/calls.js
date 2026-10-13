@@ -97,7 +97,7 @@ const LINES = {
   },
   thickDust: {
     bean: 'Watch for the dust.',
-    irwin: { role: 'cdr', text: 'It’s all dust. I’m on the gauges.' },
+    irwin: 'Lot of dust.',
     schmitt: 'Getting a little dust.',
     plain: 'Can’t see much for the dust.',
   },
