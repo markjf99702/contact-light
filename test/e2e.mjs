@@ -221,6 +221,17 @@ try {
   assert.ok(ground > 50, `lit ground past the end of the site (brightness ${ground.toFixed(0)})`);
   await page.evaluate(() => window.contactLight.speed(1));
 
+  // ---------- climbing away ----------
+  // Held at UP 8 the LM climbs and climbs: it stays in view, below the numbers, not behind them.
+  await page.evaluate(() => { window.contactLight.fly('a17'); window.contactLight.hold({ rod: 33 }); window.contactLight.speed(6); });
+  await until(() => window.contactLight.state().alt > 1300);
+  await page.evaluate(() => window.contactLight.speed(0));
+  await page.waitForTimeout(200);
+  const lm = (await page.evaluate(() => window.contactLight.scene())).lm;
+  const hudBox = await page.locator('#hud').boundingBox(), panelBox = await page.locator('#panel').boundingBox();
+  assert.ok(lm[1] > hudBox.y + hudBox.height && lm[3] < panelBox.y, `the LM is in view 1,300 feet up: ${lm.map(Math.round)}`);
+  await page.evaluate(() => window.contactLight.speed(1));
+
   // ---------- out of fuel ----------
   await page.evaluate(() => { window.contactLight.fly('a14'); window.contactLight.setFuel(0.3); window.contactLight.speed(3); });
   await until(() => window.contactLight.state().lines.some(l => /Antares, Houston\. We copy the abort\./.test(l)));

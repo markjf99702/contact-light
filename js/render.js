@@ -72,7 +72,9 @@ function camera(r, sc) {
   const fx = followAsc ? f.asc.x : f.x;
   const fy = followAsc ? f.asc.y : f.y;
   const alt = Math.max(0, fy - f.veh.cg - groundAt(g, fx));
-  const viewFt = clamp(alt * 1.38 + 74, 100, 1100);
+  // Higher up it takes in more sky as well, so a climb (or the ascent stage leaving after an abort)
+  // stays in view below the numbers instead of rising behind them.
+  const viewFt = Math.max(100, alt * 1.38 + 74 + Math.max(0, alt - 600) * 0.3);
   let s = Math.min(sceneH / viewFt, r.W / 96);
   const lead = clamp((f.phase === 'flying' ? f.vx : 0) / 50, -1, 1) * 0.26 * (view.lead ?? 1);
   // Low down, sit the LM a little left of centre: its shadow falls ahead, to the right.

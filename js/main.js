@@ -744,6 +744,6 @@ window.contactLight = {
   demo() { return demo && { site: demo.site.id, phase: demo.f.phase, alt: altitude(demo.f), vx: demo.f.vx }; },
   drawing() { return r.key; },
   // What the picture shows: how thick the dust is, whether the LM's shadow is on screen, what the marks under it say.
-  scene() { return { dust: r.dustI, shadow: !!r.shadowSeen, marks: r.footQuality || null }; },
+  scene() { return { dust: r.dustI, shadow: !!r.shadowSeen, marks: r.footQuality || null, lm: r.lmBox || null }; },
   hold(o) { Object.assign(input, o); }, // set the controls directly: { pad, throttle, rotate }
 };
