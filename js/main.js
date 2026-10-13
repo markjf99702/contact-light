@@ -251,7 +251,11 @@ function tick(c, dt) {
     return;
   }
   const alt = altitude(f);
-  const state = { alt, rate: f.vy, fwd: f.vx, pct: pct(f), t: f.t, dustOn: r.dustI > 0.12, thickDust: r.dustI > 0.7 && c.site.dust.thick >= 5, shadowSeen: !!r.shadowSeen };
+  // The dust and the shadow are what the picture shows, so they count only once the picture is of
+  // this flight: a new flight's first steps run before it's drawn, while the screen still shows the
+  // flight that was behind the title or briefing, perhaps deep in its own dust.
+  const drawn = r.key === c.key;
+  const state = { alt, rate: f.vy, fwd: f.vx, pct: pct(f), t: f.t, dustOn: drawn && r.dustI > 0.12, thickDust: drawn && r.dustI > 0.7 && c.site.dust.thick >= 5, shadowSeen: drawn && !!r.shadowSeen };
   for (const l of radioUpdate(c.radio, f, events, state)) {
     if (l.at) c.pending.push({ ...l, at: f.t + l.at });
     else say(c, l);

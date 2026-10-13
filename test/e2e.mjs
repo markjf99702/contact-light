@@ -117,9 +117,15 @@ try {
   await page.locator('#brief').waitFor();
   assert.match(await page.textContent('#bText'), /West crater/);
   assert.equal(await page.textContent('#bControls'), '▲ slows your descent · drag the hand controller to steer', 'the briefing names the two controls');
+  // Take over while the briefing's own flight is low in its dust: the radio hears only yours.
+  await page.evaluate(() => window.contactLight.speed(8));
+  await until(() => { const d = window.contactLight.demo(); return d.site === 'a11' && d.alt < 50 && window.contactLight.scene().dust > 0.12; });
+  await page.evaluate(() => window.contactLight.speed(1));
   await page.tap('#goBtn');
   await until(() => window.contactLight.state().site === 'a11' && window.contactLight.state().screen === 'flight');
   await until(() => window.contactLight.state().lines.some(l => /Eagle, Houston\. You're go for landing\./.test(l)));
+  await page.waitForTimeout(1000);
+  assert.ok(!(await state()).lines.some(l => /dust/i.test(l)), `no dust call 500 feet up: ${(await state()).lines}`);
   assert.equal(await page.locator('#lampContact').getAttribute('class'), 'lamp blue', 'the contact light is off');
   await page.evaluate(() => { window.contactLight.autopilot(true); window.contactLight.speed(6); });
   await until(() => window.contactLight.state().contact);
@@ -149,6 +155,8 @@ try {
   assert.ok(await page.locator('#loopList li').count() > 8, 'the landing as a transcript');
   assert.match(await page.textContent('#loopList'), /102:43:22Duke: Eagle, Houston\. You’re go for landing\./, 'stamped from when Armstrong took over');
   assert.match(await page.textContent('#loopList'), /Armstrong: Houston, Tranquility Base here\. The Eagle has landed\./);
+  const loop = await page.textContent('#loopList');
+  assert.ok(loop.indexOf('Picking up some dust.') > loop.indexOf('You’re go for landing.'), 'the dust call comes when the dust does');
 
   await page.tap('#sitesBtn');
   await page.locator('#title').waitFor();
