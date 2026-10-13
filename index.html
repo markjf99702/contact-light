@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Contact Light</title>
+  <meta name="description" content="Land on the Moon the way the Apollo commanders did: click the descent rate up or down a foot per second at a time, and tilt to fly past the boulders. Six Apollo landing sites, the fuel calls, and the blue light that means you're down.">
+  <meta property="og:title" content="Contact Light">
+  <meta property="og:description" content="Land on the Moon the way Armstrong did, a click at a time.">
+  <meta property="og:image" content="https://contact-light.junkdrawer.works/og.png">
+  <meta property="og:url" content="https://contact-light.junkdrawer.works/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#050607">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="preload" href="fonts/jost.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/b612-mono-700.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <canvas id="scene" aria-label="A Lunar Module coming down toward the Moon's surface, seen from the side"></canvas>
+
+  <header class="hud" id="hud" hidden>
+    <div class="hud-row">
+      <button type="button" class="icon-btn" id="menuBtn" aria-label="Menu">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+      <p class="hud-name"><b id="hudName">Apollo 11</b> <span id="hudPlace">Tranquility Base</span></p>
+      <p class="clock" id="clock" hidden><span>BINGO</span> <b id="clockTime">1:34</b></p>
+    </div>
+    <div class="readouts">
+      <div class="ro"><span class="lbl">ALT</span><b id="roAlt">520</b><span class="unit">ft</span></div>
+      <div class="ro"><span class="lbl" id="roRateLbl">DOWN</span><b id="roRate">14.0</b><span class="unit">ft/s</span></div>
+      <div class="ro"><span class="lbl" id="roFwdLbl">FWD</span><b id="roFwd">58</b><span class="unit">ft/s</span></div>
+      <div class="ro"><span class="lbl">FUEL</span><b id="roFuel">9.1</b><span class="unit">%</span></div>
+    </div>
+    <canvas class="strip" id="strip" aria-hidden="true"></canvas>
+    <div class="radio" id="radio" aria-live="polite" aria-atomic="false"></div>
+  </header>
+
+  <section class="panel" id="panel" hidden aria-label="Controls">
+    <div class="rod" id="rod">
+      <button type="button" class="rod-btn" id="rodUp" aria-label="Rate up: slow the descent by 1 foot per second">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="rod-read"><span class="lbl">RATE</span><b id="rodRead">DOWN 14</b></div>
+      <button type="button" class="rod-btn" id="rodDown" aria-label="Rate down: speed up the descent by 1 foot per second">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9l7 7 7-7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div class="lever" id="lever" hidden role="slider" tabindex="0" aria-label="Throttle" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <span class="lbl">THROTTLE</span>
+      <div class="lever-track"><div class="lever-fill" id="leverFill"></div><div class="lever-knob" id="leverKnob"></div></div>
+      <b id="leverRead">0%</b>
+    </div>
+    <div class="lamps">
+      <div class="lamp amber" id="lampLow"><span>LOW<br>LEVEL</span></div>
+      <div class="lamp blue" id="lampContact"><span>LUNAR<br>CONTACT</span></div>
+    </div>
+    <div class="aca" id="aca" role="slider" tabindex="0" aria-label="Hand controller: drag left or right to tilt" aria-valuemin="-20" aria-valuemax="20" aria-valuenow="0">
+      <span class="lbl" id="acaLbl">HAND CONTROLLER</span>
+      <div class="aca-track" id="acaTrack">
+        <i class="tick" style="left:10%"></i><i class="tick" style="left:30%"></i><i class="tick mid" style="left:50%"></i><i class="tick" style="left:70%"></i><i class="tick" style="left:90%"></i>
+        <div class="aca-needle" id="acaNeedle"></div>
+        <div class="aca-knob" id="acaKnob"></div>
+      </div>
+      <b class="aca-read" id="acaRead">UPRIGHT</b>
+    </div>
+    <p class="keys" id="keys">↑ ↓ rate · ← → tilt · Esc menu</p>
+  </section>
+
+  <div class="coach" id="coach" hidden><p id="coachText"></p></div>
+  <button type="button" class="skip" id="skipBtn" hidden>Skip to the result</button>
+
+  <section class="sheet title" id="title" aria-labelledby="titleH">
+    <div class="brand">
+      <span class="lamp-mark" aria-hidden="true"></span>
+      <h1 id="titleH">Contact Light</h1>
+      <p class="lede">Land on the Moon the way the Apollo commanders did, a click at a time.</p>
+    </div>
+    <div class="card">
+      <div class="modes" id="modes" role="radiogroup" aria-label="How to fly">
+        <button type="button" role="radio" data-mode="p66" aria-checked="true">P66</button>
+        <button type="button" role="radio" data-mode="arcade" aria-checked="false">Arcade</button>
+        <button type="button" role="radio" data-mode="free" aria-checked="false">Free flight</button>
+      </div>
+      <p class="mode-note" id="modeNote"></p>
+      <ol class="sites" id="sites"></ol>
+      <div class="free" id="freePanel" hidden>
+        <canvas class="profile" id="freeProfile" aria-hidden="true"></canvas>
+        <p class="free-name"><b id="freeName">Ground 1</b> <span id="freeKind"></span></p>
+        <div class="actions">
+          <button type="button" class="go" id="freeGo">Take over</button>
+          <button type="button" class="ghost" id="freeNew">New ground</button>
+        </div>
+        <p class="free-stats" id="freeStats"></p>
+      </div>
+      <div class="settings">
+        <button type="button" class="chip" id="soundBtn" aria-pressed="true">Sound on</button>
+        <button type="button" class="chip" id="voiceBtn" aria-pressed="false">Read calls aloud</button>
+      </div>
+      <details class="how">
+        <summary>How to fly</summary>
+        <ul>
+          <li><b>The rate switch</b> (▲ ▼, or the ↑ ↓ keys): the computer holds whatever descent rate you set, and each click changes it by a foot per second. That's P66, the program every Apollo commander landed in.</li>
+          <li><b>The hand controller</b> (drag it, or hold ← →): tilt back to slow down, forward to speed up. Let go and the LM stands upright again.</li>
+          <li><b>The numbers:</b> altitude, how fast you're coming down, speed along the ground, and fuel. The marks under the LM show where its footpads will land: green is good, amber is rough, red is no.</li>
+          <li><b>Fuel:</b> the low-level light comes on at 5.6%. Houston calls 60 and 30 seconds to Bingo, and at Bingo you have 20 seconds to land or abort.</li>
+          <li><b>Contact light:</b> the probes under the footpads, 67 inches long, have touched. Hold steady; the engine stops when the footpads do.</li>
+          <li><b>Plaques:</b> every number gets gold, silver or bronze, and the plaque is the worst of them. Gold needs 3 ft/s or softer, a foot per second or less sideways, upright and level, nothing under the footpads, close to the target, and down before Houston's 30-second call.</li>
+          <li><b>Arcade</b> is the 1979 way: raw throttle and rotation, no computer. <b>Free flight</b> rolls new ground every time.</li>
+        </ul>
+      </details>
+      <details class="how">
+        <summary>About the sites</summary>
+        <p>The six landing sites are drawn after the real ones, from the mission reports and the Apollo Lunar Surface Journal, not measured from them: the big craters are about the right size and in about the right order along the approach, and the small craters and rocks are made up. Fuel loads are set for the game, not copied from the flights.</p>
+        <p>The calls during your descent are made from your own numbers in the style of each crew. The lines after touchdown are the real ones, from the air-to-ground transcripts. The beeps are Quindar tones: they keyed Houston's transmitters, which is why only Houston's lines have them.</p>
+        <p>The plaques are this game's own. Nothing here is from or endorsed by NASA.</p>
+      </details>
+      <footer class="jd-foot">
+        <a href="https://junkdrawer.works/">Part of junkdrawer.works</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://junkdrawer.works/privacy.html">Privacy</a>
+      </footer>
+    </div>
+  </section>
+
+  <section class="sheet brief" id="brief" hidden aria-labelledby="bPlace">
+    <div class="card">
+      <p class="eyebrow" id="bMission">Apollo 11 · Eagle</p>
+      <h2 id="bPlace">Tranquility Base</h2>
+      <p class="meta" id="bMeta"></p>
+      <canvas class="profile" id="bProfile" aria-hidden="true"></canvas>
+      <p class="brief-text" id="bText"></p>
+      <p class="history" id="bHistory"></p>
+      <p class="goals" id="bGoals"></p>
+      <p class="best" id="bBest"></p>
+      <div class="actions">
+        <button type="button" class="go" id="goBtn">Take over</button>
+        <button type="button" class="ghost" id="backBtn">All sites</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="sheet pause" id="pause" hidden aria-labelledby="pauseH">
+    <div class="card">
+      <h2 id="pauseH">Paused</h2>
+      <p class="meta" id="pauseMeta"></p>
+      <button type="button" class="go" id="resumeBtn">Resume</button>
+      <div class="actions">
+        <button type="button" class="ghost" id="restartBtn">Start over</button>
+        <button type="button" class="ghost" id="quitBtn">All sites</button>
+      </div>
+      <div class="settings">
+        <button type="button" class="chip" id="soundBtn2" aria-pressed="true">Sound on</button>
+        <button type="button" class="chip" id="voiceBtn2" aria-pressed="false">Read calls aloud</button>
+      </div>
+      <footer class="jd-foot">
+        <a href="https://junkdrawer.works/">Part of junkdrawer.works</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://junkdrawer.works/privacy.html">Privacy</a>
+      </footer>
+    </div>
+  </section>
+
+  <section class="sheet result" id="result" hidden aria-labelledby="rTitle">
+    <div class="card">
+      <div class="plaque" id="plaque"></div>
+      <h2 id="rTitle">Gold</h2>
+      <p class="reason" id="rReason"></p>
+      <table class="judging" id="rRows"></table>
+      <p class="tip" id="rTip"></p>
+      <div class="actions">
+        <button type="button" class="go" id="againBtn">Fly it again</button>
+        <button type="button" class="ghost" id="nextBtn">Next site</button>
+        <button type="button" class="ghost" id="sitesBtn">All sites</button>
+      </div>
+    </div>
+  </section>
+
+  <noscript><p class="noscript">Contact Light needs JavaScript to fly the Lunar Module.</p></noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
