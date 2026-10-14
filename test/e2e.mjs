@@ -439,18 +439,21 @@ try {
   await side.close();
 
   // ---------- reading the calls aloud ----------
-  // The browser's voice is swapped for a recorder. An iPhone only lets a page speak once it has
-  // spoken during a tap, so the first thing said has to be said in one.
+  // The browser's voice is swapped for a recorder, with a Mac's voices: listed by name, so the joke
+  // ones come first. An iPhone only lets a page speak once it has spoken during a tap, so the first
+  // thing said has to be said in one.
   const vc = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await vc.addInitScript(() => {
     window.said = [];
+    const mac = [['Albert', 'en-US'], ['Alice', 'it-IT'], ['Bad News', 'en-US'], ['Bahh', 'en-US'], ['Daniel', 'en-GB'], ['Samantha', 'en-US'], ['Zarvox', 'en-US']];
     const voice = {
       speaking: false, pending: false, onvoiceschanged: null,
-      speak(u) { window.said.push({ text: u.text, volume: u.volume, during: window.event ? window.event.type : null }); },
+      speak(u) { window.said.push({ text: u.text, volume: u.volume, during: window.event ? window.event.type : null, ...(u.voice ? { voice: u.voice.name } : {}) }); },
       cancel() { window.said.push({ cancel: true }); },
-      getVoices() { return []; },
+      getVoices() { return mac.map(([name, lang]) => ({ name, lang })); },
     };
     Object.defineProperty(window, 'speechSynthesis', { value: voice, configurable: true });
+    window.SpeechSynthesisUtterance = class { constructor(text) { Object.assign(this, { text, volume: 1, rate: 1, pitch: 1, voice: null }); } };
   });
   const vp = await vc.newPage();
   watch(vp);
@@ -462,6 +465,9 @@ try {
   await vp.tap('[data-site=a11]');
   await vp.tap('#goBtn');
   await vp.waitForFunction(() => window.said.some(s => /^Eagle, Houston/.test(s.text || '')), null, LONG);
+  await vp.waitForFunction(() => window.said.some(s => /feet/.test(s.text || '')), null, LONG);
+  const voices = await vp.evaluate(() => [...new Set(window.said.filter(s => s.voice).map(s => s.voice))]);
+  assert.deepEqual(voices, ['Samantha'], 'Houston and the crew read by a real voice, not Albert or Bad News');
   await vp.tap('#menuBtn');
   const saidBefore = await vp.evaluate(() => window.said.length);
   await vp.tap('#voiceBtn2');

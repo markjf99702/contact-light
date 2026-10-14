@@ -144,10 +144,15 @@ function primeSpeech() {
   } catch { /* no voice: the words are on screen anyway */ }
 }
 
+// Macs and iPhones also offer joke voices and old robotic ones, and a Mac lists its voices by name,
+// so the first two US voices there would be Albert and Bad News, who sings. The radio never uses those.
+const NOVELTY = /\b(albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|fred|good news|hysterical|jester|junior|kathy|organ|princess|ralph|superstar|trinoids|whisper|wobble|zarvox|eddy|eloquence|flo|grandma|grandpa|reed|rocko|sandy|shelley)\b/i;
+const english = () => speechSynthesis.getVoices().filter(v => /^en(-|_|$)/i.test(v.lang) && !NOVELTY.test(v.name));
+
 function loadVoices() {
   if (!canSpeak()) return;
-  voices = speechSynthesis.getVoices().filter(v => /^en(-|_|$)/i.test(v.lang));
-  if (!voices.length) speechSynthesis.onvoiceschanged = () => { voices = speechSynthesis.getVoices().filter(v => /^en(-|_|$)/i.test(v.lang)); };
+  voices = english();
+  if (!voices.length) speechSynthesis.onvoiceschanged = () => { voices = english(); };
 }
 
 function speak(l) {
