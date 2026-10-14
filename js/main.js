@@ -379,7 +379,9 @@ function say(c, l) {
 // The landing's own line ("Houston, Tranquility Base here. The Eagle has landed."), large in the sky
 // between the numbers and the LM: the last sentence big, anything before it smaller above.
 function showMoment(c, l, t) {
-  const parts = l.text.split(/(?<=[.!?])\s+/);
+  // Split after each sentence's stop. (Not with a lookbehind: iPhones before iOS 16.4 can't read one,
+  // and one unreadable line stops the whole game loading.)
+  const parts = l.text.replace(/([.!?])\s+/g, '$1\n').split('\n');
   setMono('momentWho', `${String(l.who).toUpperCase()} · ${missionTime(c.site, t)}`);
   setText('momentLead', parts.slice(0, -1).join(' '));
   $('momentLead').hidden = parts.length < 2;

@@ -619,3 +619,12 @@ test('the offline copy lists every file the page uses', async () => {
   for (const f of listed) if (f !== './') await readFile(join(root, f));
   assert.match(sw, /const CACHE = 'contact-light-v\d+'/);
 });
+
+test('nothing in the game an older iPhone can\'t read', async () => {
+  // Safari before iOS 16.4 can't parse a regular expression lookbehind, and one it can't parse stops
+  // every module loading, so the whole game would be a blank title.
+  for (const f of await readdir(join(root, 'js'))) {
+    const src = await readFile(join(root, 'js', f), 'utf8');
+    assert.doesNotMatch(src, /\(\?<[=!]/, `js/${f} has a lookbehind`);
+  }
+});
