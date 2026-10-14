@@ -423,6 +423,19 @@ try {
     const b = await p.boundingBox();
     if (b) assert.ok(b.x + b.width < clock.x || b.y > clock.y + clock.height || b.y + b.height < clock.y, 'the clock is clear of the radio');
   }
+  // Held sideways a briefing is taller than the screen. Scroll one down to its buttons, go back, and
+  // the next one still opens at its top, with its name and profile in view.
+  await sp.evaluate(() => window.contactLight.speed(1));
+  await sp.tap('#menuBtn');
+  await sp.tap('#quitBtn');
+  await sp.tap('[data-site=a15]');
+  await sp.locator('#brief').waitFor();
+  await sp.evaluate(() => { const s = document.getElementById('brief'); s.scrollTop = s.scrollHeight; });
+  assert.ok(await sp.evaluate(() => document.getElementById('brief').scrollTop > 50), 'the briefing scrolls');
+  await sp.tap('#backBtn');
+  await sp.tap('[data-site=a16]');
+  await sp.locator('#brief').waitFor();
+  assert.equal(await sp.evaluate(() => document.getElementById('brief').scrollTop), 0, 'the next briefing opens at its top');
   await side.close();
 
   // ---------- reading the calls aloud ----------

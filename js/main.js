@@ -184,6 +184,9 @@ function show(name) {
   $('brief').hidden = name !== 'brief';
   $('pause').hidden = name !== 'paused';
   $('result').hidden = name !== 'result';
+  // A card opens at its top, not wherever the last one was scrolled to. (The site list keeps its place.)
+  const card = { brief: 'brief', paused: 'pause', result: 'result' }[name];
+  if (card) $(card).scrollTop = 0;
   $('skipBtn').hidden = name !== 'ending';
   $('coach').hidden = true;
   if (name !== 'ending') $('moment').hidden = true;
