@@ -387,6 +387,7 @@ function showMoment(c, l, t) {
   $('momentLead').hidden = parts.length < 2;
   setText('momentLine', parts[parts.length - 1]);
   const box = $('moment');
+  box.classList.toggle('day', c.site.world === 'earth'); // Ellington's blue sky
   box.hidden = false;
   const top = $('hud').getBoundingClientRect().bottom + 8;
   const bottom = r.lmBox ? Math.min(r.lmBox[1], $('panel').getBoundingClientRect().top) - 12 : innerHeight * 0.6;
