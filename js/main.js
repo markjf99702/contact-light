@@ -257,6 +257,7 @@ function keepOut() {
 
 let last = performance.now(), acc = 0;
 function frame(now) {
+  requestAnimationFrame(frame); // first, so a slip in one frame can't stop the game for good
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
   const running = cur && ['flight', 'paused', 'ending', 'result'].includes(screen) ? cur : demo;
@@ -267,7 +268,6 @@ function frame(now) {
     if (n >= 1200) acc = 0;
   } else acc = 0;
   if (running) draw(running, dt);
-  requestAnimationFrame(frame);
 }
 
 function tick(c, dt) {
