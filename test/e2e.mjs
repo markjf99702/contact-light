@@ -383,6 +383,14 @@ try {
   const cap = await dp.locator('#moment').boundingBox(), earth = (await dp.evaluate(() => window.contactLight.scene())).earth;
   assert.ok(Math.abs(cap.x + cap.width / 2 - 640) < 2, `the landing's line is in the middle (${cap.x}, ${cap.width})`);
   assert.ok(earth[3] < cap.y || earth[1] > cap.y + cap.height || earth[2] < cap.x || earth[0] > cap.x + cap.width, 'and clear of the Earth');
+  // A shorter laptop window, at Ellington: a shallow sky with no Earth in it. The line still finds its
+  // place and the card still comes (it used to stop the game there).
+  await dp.setViewportSize({ width: 1366, height: 600 });
+  await dp.evaluate(() => { window.contactLight.fly('ellington'); window.contactLight.autopilot(true); window.contactLight.speed(6); });
+  await dp.waitForFunction(() => !document.getElementById('moment').hidden, null, LONG);
+  const low = await dp.locator('#moment').boundingBox();
+  assert.ok(Math.abs(low.x + low.width / 2 - 683) < 2 && low.y >= (await dp.locator('#hud').boundingBox()).height, `Ellington's line is in the middle, under the numbers (${low.x}, ${low.y})`);
+  await dp.waitForFunction(() => window.contactLight.state().screen === 'result', null, LONG);
   await desk.close();
 
   // ---------- the dust at Surveyor crater, and a phone on its side ----------

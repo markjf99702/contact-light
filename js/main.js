@@ -395,10 +395,11 @@ function showMoment(c, l, t) {
   let x = innerWidth / 2, y = ys.find(q => fits(q) && clear(x, q));
   if (y == null) {
     // Where the sky is too shallow (a laptop): off to the side away from the Earth, if the line is
-    // narrow enough to get clear of it there; otherwise in the middle, as low as it may go.
-    const away = e[0] + e[2] > innerWidth ? e[0] - 28 - w / 2 : e[2] + 28 + w / 2;
-    const ax = Math.max(w / 2 + 8, Math.min(innerWidth - w / 2 - 8, away));
-    if (clear(ax, ys[0])) { x = ax; y = ys[0]; } else y = Math.max(top + h / 2, bottom + 24 - h / 2);
+    // narrow enough to get clear of it there; otherwise in the middle, as low as it may go. Ellington's
+    // sky has no Earth in it, so there it's always the middle.
+    const away = e && (e[0] + e[2] > innerWidth ? e[0] - 28 - w / 2 : e[2] + 28 + w / 2);
+    const ax = e && Math.max(w / 2 + 8, Math.min(innerWidth - w / 2 - 8, away));
+    if (e && clear(ax, ys[0])) { x = ax; y = ys[0]; } else y = Math.max(top + h / 2, bottom + 24 - h / 2);
   }
   box.style.left = `${Math.round(x)}px`;
   box.style.top = `${Math.round(y)}px`;
