@@ -77,6 +77,6 @@ To put it online with GitHub Pages: **Settings → Pages → Build and deploymen
 - `js/sound.js`: every sound made in the browser with Web Audio, and the browser's voice. `js/store.js`: what's kept in localStorage (`contact-light.v1`).
 - `js/main.js`: the page: screens, controls and the loop.
 - `fonts/`: Jost and B612 Mono (SIL Open Font License), served from here so nothing loads from elsewhere. B612 was drawn for aircraft cockpit displays.
-- `sw.js`: keeps a copy of the game for flying offline.
+- `sw.js`: keeps a copy of the game for flying offline. On a connection that isn't answering, a page opens from that copy after four seconds. `FILES` in it is a fingerprint of the files it keeps: change one and `npm test` says what to set it to, so a release never leaves the copy half old.
 - `tools/screenshots.mjs` draws the README's pictures in `docs/` and the link preview, `og.png`, from the game itself; `tools/make-icons.mjs` draws the icons.
 - `scripts/build.mjs` bundles the game, fonts and all, into `dist/contact-light.html`, which opens from anywhere, and writes `dist/artifact.html`, the same page without its `<html>`, `<head>` and `<body>`, for a playable copy shown inside another page. `dist/` isn't kept in the repo.
